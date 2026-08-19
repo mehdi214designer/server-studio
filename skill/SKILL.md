@@ -5,7 +5,7 @@ description: Save a local dev server into the Server Studio app. Use this whenev
 
 # Save Server to Dashboard
 
-The user runs a **Server Studio** Mac app that lists their local servers for one-click run/stop.
+The user runs **Server Studio**, an app that lists their local servers for one-click run/stop.
 This skill adds a server to that dashboard so nothing gets lost.
 
 ## When to use it
@@ -76,7 +76,7 @@ Field guide:
 - Ports are unique across all entries. `--assign` picks the lowest free port starting at 3001.
 - The script prints `PORT <n>` — use that number when wiring the project's dev config.
 - Data is written to the Server Studio data file: `~/Library/Application Support/Server Studio/data.json`
-  on macOS, `%APPDATA%\\Server Studio\\data.json` on Windows, `~/.config/server-studio/data.json` on Linux.
+  on macOS, `%APPDATA%\Server Studio\data.json` on Windows, `~/.config/server-studio/data.json` on Linux.
 - The dashboard **auto-refreshes** every few seconds, so new/updated entries appear on their own.
 
 ## Default behavior for the assistant
