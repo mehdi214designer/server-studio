@@ -4,8 +4,8 @@
 // re-registering the same project never changes its port (unless --force).
 //
 // No npm deps. Usage:
-//   node register-server.js --name "FluentCRM Local" --project "FluentCRM redesign" \
-//        --cwd "/Users/you/Sites/fluentcrm" --command "npm run dev" --url "localhost:3001" \
+//   node register-server.js --name "Portfolio Site" --project "Client redesign" \
+//        --cwd "/Users/you/Sites/portfolio" --command "npm run dev" --url "localhost:3001" \
 //        --category "WordPress" --tag "Vite" --note "admin: ninja/ninja"
 //
 //   # let it pick a fresh, never-used port for a NEW project:

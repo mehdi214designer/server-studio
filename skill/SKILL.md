@@ -59,7 +59,7 @@ node "$HOME/.claude/skills/server-studio/register-server.js" \
 ```
 
 Field guide:
-- `--name` — short label, e.g. "FluentCRM Local"
+- `--name` — short label, e.g. "Portfolio Site"
 - `--project` — the project/task it belongs to
 - `--category` — broad bucket: WordPress, Web app, Storybook, Docs, etc. (used for the filter chips)
 - `--cwd` — absolute project folder; the run command executes here
