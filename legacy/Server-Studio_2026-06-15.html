@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local Server Dashboard</title>
+<style>
+  :root {
+    --bg: #0c0d10;
+    --bg-soft: #131419;
+    --card: #16181f;
+    --card-hover: #1b1e27;
+    --border: #24262f;
+    --border-soft: #1e2028;
+    --text: #e7e9ee;
+    --text-dim: #9aa0ad;
+    --text-faint: #636978;
+    --accent: #6d8bff;
+    --accent-soft: rgba(109, 139, 255, 0.12);
+    --green: #3ecf8e;
+    --green-soft: rgba(62, 207, 142, 0.14);
+    --red: #f0556a;
+    --red-soft: rgba(240, 85, 106, 0.14);
+    --amber: #f5b343;
+    --radius: 14px;
+    --shadow: 0 8px 30px rgba(0,0,0,0.4);
+    font-synthesis: none;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 32px 24px 80px;
+    background-image: radial-gradient(900px 500px at 80% -10%, rgba(109,139,255,0.06), transparent 60%);
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .title h1 {
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .title .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 4px var(--green-soft);
+  }
+  .title p { color: var(--text-dim); font-size: 13.5px; margin-top: 6px; }
+
+  .head-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  button, .btn {
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 550;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    padding: 9px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    line-height: 1;
+  }
+  button:hover, .btn:hover { background: var(--card-hover); border-color: #313440; }
+  button:active { transform: translateY(1px); }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0b0d12;
+    font-weight: 650;
+  }
+  .btn-primary:hover { background: #7e98ff; border-color: #7e98ff; }
+  .btn-ghost { background: transparent; }
+
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .search {
+    flex: 1;
+    min-width: 220px;
+    position: relative;
+  }
+  .search input {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 11px 14px 11px 38px;
+    border-radius: 11px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search input:focus { border-color: var(--accent); }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-faint); }
+
+  .stats { display: flex; gap: 18px; color: var(--text-dim); font-size: 13px; padding-right: 4px; }
+  .stats b { color: var(--text); font-weight: 600; }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .chip {
+    font-size: 12.5px;
+    font-weight: 550;
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip:hover { border-color: #313440; color: var(--text); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #0b0d12; font-weight: 650; }
+  .chip .n { opacity: 0.65; font-weight: 600; }
+  .chip.active .n { opacity: 0.8; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: border-color 0.15s, transform 0.15s;
+    position: relative;
+  }
+  .card:hover { border-color: #2e313d; transform: translateY(-2px); }
+  .card.pinned { border-color: rgba(245,179,67,0.35); }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .card-name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+  .pin-star { cursor: pointer; color: var(--text-faint); font-size: 15px; line-height: 1; background: none; border: none; padding: 2px; }
+  .pin-star.on { color: var(--amber); }
+
+  .tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .cat {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(245,179,67,0.13);
+    color: var(--amber);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .project { font-size: 13px; color: var(--text-dim); display: flex; align-items: center; gap: 7px; }
+  .project svg { color: var(--text-faint); flex-shrink: 0; }
+
+  .url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 9px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--text-dim);
+  }
+  .url-row .status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-faint); flex-shrink: 0;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .url-row .status.up { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+  .url-row .status.down { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+  .url-row .status.checking { background: var(--amber); animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  .url-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+  .note { font-size: 13px; color: var(--text-faint); line-height: 1.5; }
+
+  .card-actions { display: flex; gap: 8px; margin-top: 2px; }
+  .card-actions .open { flex: 1; justify-content: center; }
+  .icon-btn { padding: 9px; }
+
+  .empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-faint);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+  }
+  .empty h3 { color: var(--text-dim); font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .empty p { font-size: 13.5px; margin-bottom: 20px; }
+
+  /* Modal */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(5,6,8,0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 460px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .modal h2 { font-size: 18px; font-weight: 650; margin-bottom: 4px; letter-spacing: -0.01em; }
+  .modal .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 6px; font-weight: 500; }
+  .field input, .field textarea {
+    width: 100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 56px; }
+  .field .hint { font-size: 11.5px; color: var(--text-faint); margin-top: 5px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+
+  @media (max-width: 560px) {
+    body { padding: 20px 14px 60px; }
+    .row2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <h1><span class="dot"></span> Local Server Dashboard</h1>
+      <p>All your local dev servers in one place. Nothing gets lost.</p>
+    </div>
+    <div class="head-actions">
+      <button class="btn-ghost" id="checkAll" title="Ping every server">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.2-8.5"/><polyline points="21 3 21 9 15 9"/></svg>
+        Check status
+      </button>
+      <button class="btn-ghost" id="exportBtn" title="Save a backup file">Export</button>
+      <button class="btn-ghost" id="importBtn" title="Load from backup file">Import</button>
+      <input type="file" id="importFile" accept=".json" hidden>
+      <button class="btn-primary" id="addBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add server
+      </button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search" placeholder="Search by name, project, URL or tag...">
+    </div>
+    <div class="stats">
+      <span><b id="countTotal">0</b> servers</span>
+      <span><b id="countUp">0</b> online</span>
+    </div>
+  </div>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="empty" id="empty" style="display:none;">
+    <h3>No servers yet</h3>
+    <p>Add your first local server so you always know which port runs which project.</p>
+    <button class="btn-primary" onclick="openModal()">+ Add your first server</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Add server</h2>
+    <div class="sub">Give it a name so you'll never forget what it's for.</div>
+    <input type="hidden" id="editId">
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="f_name" placeholder="e.g. FluentCRM Local">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Project</label>
+        <input type="text" id="f_project" placeholder="e.g. FluentCRM redesign">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <input type="text" id="f_category" list="catList" placeholder="WordPress, Web app...">
+        <datalist id="catList"></datalist>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>URL / Address</label>
+        <input type="text" id="f_url" placeholder="localhost:3000">
+        <div class="hint">Port number alone works too</div>
+      </div>
+      <div class="field">
+        <label>Tag</label>
+        <input type="text" id="f_tag" placeholder="Vite, MAMP...">
+      </div>
+    </div>
+    <div class="field">
+      <label>Notes <span style="color:var(--text-faint)">(optional)</span></label>
+      <textarea id="f_note" placeholder="Login, what it's for, anything to remember..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="saveBtn">Save server</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'local_server_dashboard_v1';
+let servers = [];
+let activeCat = 'all';
+
+function load() {
+  try { servers = JSON.parse(localStorage.getItem(KEY)) || []; }
+  catch { servers = []; }
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(servers)); }
+
+function uid() { return 's_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36); }
+
+function normalizeUrl(raw) {
+  let u = (raw || '').trim();
+  if (!u) return '';
+  if (/^\d+$/.test(u)) u = 'localhost:' + u;          // bare port
+  if (!/^https?:\/\//i.test(u)) u = 'http://' + u;     // add scheme
+  return u;
+}
+
+function esc(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function categories() {
+  return [...new Set(servers.map(s => (s.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+}
+
+function renderFilters() {
+  const cats = categories();
+  const box = document.getElementById('filters');
+  if (cats.length === 0) { box.innerHTML = ''; return; }
+  const count = c => servers.filter(s => (s.category || '').trim() === c).length;
+  const chip = (key, label, n) =>
+    `<button class="chip ${activeCat === key ? 'active' : ''}" onclick="setCat('${key.replace(/'/g, "\\'")}')">${esc(label)} <span class="n">${n}</span></button>`;
+  box.innerHTML = chip('all', 'All', servers.length) + cats.map(c => chip(c, c, count(c))).join('');
+}
+
+function setCat(c) { activeCat = c; render(); }
+
+function refreshCatList() {
+  document.getElementById('catList').innerHTML = categories().map(c => `<option value="${esc(c)}">`).join('');
+}
+
+function render() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+
+  if (activeCat !== 'all' && !categories().includes(activeCat)) activeCat = 'all';
+  renderFilters();
+  refreshCatList();
+
+  let list = servers.filter(s =>
+    (activeCat === 'all' || (s.category || '').trim() === activeCat) &&
+    (!q || [s.name, s.project, s.url, s.tag, s.category, s.note].join(' ').toLowerCase().includes(q))
+  );
+  list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+  document.getElementById('countTotal').textContent = servers.length;
+  document.getElementById('countUp').textContent = servers.filter(s => s._status === 'up').length;
+
+  if (servers.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">No servers match your search.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(s => {
+    const url = normalizeUrl(s.url);
+    const st = s._status || 'unknown';
+    return `
+    <div class="card ${s.pinned ? 'pinned' : ''}">
+      <div class="card-top">
+        <div class="card-name">
+          <button class="pin-star ${s.pinned ? 'on' : ''}" onclick="togglePin('${s.id}')" title="Pin to top">${s.pinned ? '★' : '☆'}</button>
+          ${esc(s.name) || 'Untitled'}
+        </div>
+        <div class="badges">
+          ${s.category ? `<span class="cat">${esc(s.category)}</span>` : ''}
+          ${s.tag ? `<span class="tag">${esc(s.tag)}</span>` : ''}
+        </div>
+      </div>
+      ${s.project ? `<div class="project">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        ${esc(s.project)}</div>` : ''}
+      <div class="url-row">
+        <span class="status ${st === 'unknown' ? '' : st}" title="${st}"></span>
+        <span class="url-text">${esc(url.replace(/^https?:\/\//, ''))}</span>
+        <button class="icon-btn" style="padding:2px 4px;border:none;background:none;color:var(--text-faint)" onclick="copyUrl('${url}', this)" title="Copy URL">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+      ${s.note ? `<div class="note">${esc(s.note)}</div>` : ''}
+      <div class="card-actions">
+        <a class="btn btn-primary open" href="${url}" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open
+        </a>
+        <button class="icon-btn" onclick="editServer('${s.id}')" title="Edit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="delServer('${s.id}')" title="Delete">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---- CRUD ---- */
+function openModal(id) {
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('modalTitle').textContent = id ? 'Edit server' : 'Add server';
+  document.getElementById('editId').value = id || '';
+  const s = servers.find(x => x.id === id) || {};
+  document.getElementById('f_name').value = s.name || '';
+  document.getElementById('f_project').value = s.project || '';
+  document.getElementById('f_category').value = s.category || '';
+  document.getElementById('f_url').value = s.url || '';
+  document.getElementById('f_tag').value = s.tag || '';
+  document.getElementById('f_note').value = s.note || '';
+  setTimeout(() => document.getElementById('f_name').focus(), 50);
+}
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+
+function saveServer() {
+  const id = document.getElementById('editId').value;
+  const data = {
+    name: document.getElementById('f_name').value.trim(),
+    project: document.getElementById('f_project').value.trim(),
+    category: document.getElementById('f_category').value.trim(),
+    url: document.getElementById('f_url').value.trim(),
+    tag: document.getElementById('f_tag').value.trim(),
+    note: document.getElementById('f_note').value.trim(),
+  };
+  if (!data.name && !data.url) { alert('Add at least a name or URL.'); return; }
+  if (id) {
+    const s = servers.find(x => x.id === id);
+    Object.assign(s, data);
+  } else {
+    servers.push({ id: uid(), pinned: false, ...data });
+  }
+  save(); closeModal(); render();
+}
+
+function editServer(id) { openModal(id); }
+function delServer(id) {
+  const s = servers.find(x => x.id === id);
+  if (confirm(`Delete "${s.name || 'this server'}"?`)) { servers = servers.filter(x => x.id !== id); save(); render(); }
+}
+function togglePin(id) { const s = servers.find(x => x.id === id); s.pinned = !s.pinned; save(); render(); }
+
+function copyUrl(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    const old = btn.innerHTML;
+    btn.innerHTML = '<span style="color:var(--green);font-size:11px">copied</span>';
+    setTimeout(() => btn.innerHTML = old, 1200);
+  });
+}
+
+/* ---- Status check (best-effort) ---- */
+function checkOne(s) {
+  return new Promise(resolve => {
+    s._status = 'checking'; render();
+    const url = normalizeUrl(s.url);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3000);
+    fetch(url, { mode: 'no-cors', signal: ctrl.signal })
+      .then(() => { s._status = 'up'; })
+      .catch(() => { s._status = 'down'; })
+      .finally(() => { clearTimeout(t); resolve(); render(); });
+  });
+}
+async function checkAll() { for (const s of servers) await checkOne(s); }
+
+/* ---- Export / Import ---- */
+function exportData() {
+  const clean = servers.map(({ _status, ...rest }) => rest);
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'server-dashboard-backup.json';
+  a.click();
+}
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw 0;
+      data.forEach(d => { if (!d.id) d.id = uid(); });
+      servers = data;
+      save(); render();
+    } catch { alert('That file does not look like a valid backup.'); }
+  };
+  reader.readAsText(file);
+}
+
+/* ---- Wire up ---- */
+document.getElementById('addBtn').onclick = () => openModal();
+document.getElementById('saveBtn').onclick = saveServer;
+document.getElementById('search').oninput = render;
+document.getElementById('checkAll').onclick = checkAll;
+document.getElementById('exportBtn').onclick = exportData;
+document.getElementById('importBtn').onclick = () => document.getElementById('importFile').click();
+document.getElementById('importFile').onchange = e => { if (e.target.files[0]) importData(e.target.files[0]); };
+document.getElementById('overlay').onclick = e => { if (e.target.id === 'overlay') closeModal(); };
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && document.getElementById('overlay').classList.contains('open') && e.target.tagName !== 'TEXTAREA') saveServer();
+});
+
+load(); render();
+</script>
+</body>
+</html>

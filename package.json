@@ -1,0 +1,48 @@
+{
+  "name": "server-studio",
+  "version": "1.0.0",
+  "description": "A tiny dashboard for your local dev servers. One click to run, stop and open them, with one permanent port per project.",
+  "author": "Md Mahdi Hasan",
+  "license": "MIT",
+  "homepage": "https://github.com/mehdi214designer/server-studio#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mehdi214designer/server-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mehdi214designer/server-studio/issues"
+  },
+  "bin": {
+    "server-studio": "bin/cli.js"
+  },
+  "scripts": {
+    "build:plugin": "node scripts/build-plugin.js",
+    "prepack": "node scripts/build-plugin.js",
+    "test": "node scripts/test.js"
+  },
+  "files": [
+    "bin",
+    "app",
+    "src",
+    "skill",
+    "plugin",
+    "scripts",
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "localhost",
+    "dev-server",
+    "ports",
+    "dashboard",
+    "macos",
+    "windows",
+    "linux",
+    "claude-code",
+    "claude-skill"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

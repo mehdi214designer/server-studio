@@ -1,0 +1,6 @@
+{
+  "name": "server-studio",
+  "version": "1.0.0",
+  "description": "Save local dev servers into the Server Studio app, with one permanent unique port per project.",
+  "keywords": ["server", "localhost", "dev server", "ports"]
+}

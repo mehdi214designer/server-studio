@@ -1,0 +1,21 @@
+#!/bin/bash
+# Launcher for Server Studio.app
+HERE="$(cd "$(dirname "$0")" && pwd)"
+RES="$(cd "$HERE/../Resources" && pwd)"
+
+# Make sure common Node install locations are on PATH
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+NODE="$(command -v node)"
+if [ -z "$NODE" ]; then
+  for p in /opt/homebrew/bin/node /usr/local/bin/node "$HOME"/.nvm/versions/node/*/bin/node; do
+    [ -x "$p" ] && NODE="$p" && break
+  done
+fi
+
+if [ -z "$NODE" ]; then
+  osascript -e 'display dialog "Server Studio needs Node.js.\n\nInstall it from https://nodejs.org then open this app again." with title "Server Studio" buttons {"OK"} default button "OK" with icon caution'
+  exit 1
+fi
+
+exec "$NODE" "$RES/server.js"
