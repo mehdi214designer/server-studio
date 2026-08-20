@@ -92,11 +92,20 @@ function install() {
     console.log('\nnote: Node.js was not found on PATH. The app needs it to run.');
   }
 
-  const pluginFile = path.join(ROOT, 'dist', 'server-studio.plugin');
+  // npx wipes its cache after running, so the plugin is copied somewhere durable
+  // before its path is printed.
+  const pluginSrc = path.join(ROOT, 'dist', 'server-studio.plugin');
+  let pluginFile = null;
+  if (fs.existsSync(pluginSrc)) {
+    pluginFile = path.join(DATA_DIR, 'server-studio.plugin');
+    try { fs.copyFileSync(pluginSrc, pluginFile); }
+    catch (e) { pluginFile = null; }
+  }
+
   console.log(MAC
     ? '\nDone. Open it from Applications, or run:  open -a "Server Studio"'
     : '\nDone. Start it with:  npx server-studio start');
-  if (fs.existsSync(pluginFile)) {
+  if (pluginFile) {
     console.log('\nUsing Claude Cowork? Install the plugin by opening this file:');
     console.log('  ' + pluginFile);
   }

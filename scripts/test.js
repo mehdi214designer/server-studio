@@ -46,6 +46,8 @@ function req(opts, body) {
   check('launcher is executable', (fs.statSync(path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'MacOS', 'ServerStudio')).mode & 0o111) !== 0);
   check('skill installed', fs.existsSync(path.join(env.SERVER_STUDIO_SKILL_DEST, 'SKILL.md')));
   check('empty data file created', fs.readFileSync(path.join(env.SERVER_STUDIO_DATA_DIR, 'data.json'), 'utf8').trim() === '[]');
+  // The path printed for the Cowork plugin must survive npx clearing its cache.
+  check('plugin copied out of the package', fs.existsSync(path.join(env.SERVER_STUDIO_DATA_DIR, 'server-studio.plugin')));
 
   // Existing data must survive a reinstall.
   fs.writeFileSync(path.join(env.SERVER_STUDIO_DATA_DIR, 'data.json'), '[{"id":"keep","name":"keep me"}]');
