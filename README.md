@@ -6,6 +6,8 @@ history. It also keeps one permanent port per project, so a saved entry never go
 
 Node.js is the only requirement. No npm install inside the app, no Electron, no background daemon.
 
+![Server Studio](https://raw.githubusercontent.com/mehdi214designer/server-studio/main/docs/screenshot.png)
+
 ## Install
 
 **macOS**
