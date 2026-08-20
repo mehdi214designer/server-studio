@@ -1,8 +1,20 @@
 # Server Studio
 
-A small dashboard for the local dev servers you actually run. Every project gets a card with
-its run command, folder and URL, so starting one is a click instead of a hunt through terminal
-history. It also keeps one permanent port per project, so a saved entry never goes stale.
+A small dashboard for the local dev servers you actually run.
+
+If you work on more than three or four projects, you know the routine. You want to show someone the
+staging build, and first you have to remember which folder it lives in, then whether it starts with
+`npm run dev` or `yarn start` or `php -S`, then which port it landed on last time, then why that port
+is now busy because something else grabbed it a week ago.
+
+Server Studio gives every project a card holding its folder, its run command and its URL. Click
+**Run** and it opens a real terminal window in the right directory with the right command. Click the
+URL and the browser opens. The card also shows a live dot for whether that port is currently up, so
+you can see what is running without checking.
+
+The other half is the port rule: each project keeps one permanent port that nothing else is allowed
+to take. A saved card is worthless if the port drifts, so the app hands out a unique one and you bake
+it into the project config. Six months later the card still works.
 
 Node.js is the only requirement. No npm install inside the app, no Electron, no background daemon.
 
@@ -49,16 +61,102 @@ Your saved servers are kept. Add `--purge` if you want those deleted too.
 | `--dry-run` | Print what would happen, change nothing |
 | `--purge` | Uninstall only: also delete your saved server list |
 
+## Using it
+
+### Add your first server
+
+Click **Add server**. Only the name matters, everything else can be filled in later.
+
+| Field | What it does | Example |
+|---|---|---|
+| Name | Card title, and what you search by | `Acme Dashboard` |
+| Project | A line of context for future you | `Client analytics UI` |
+| Category | Groups cards into filter tabs along the top | `Web app` |
+| Project folder | Where the run command executes. **Browse** opens a folder picker | `~/Sites/acme` |
+| Run command | Exactly what you would type to start it | `npm run dev` |
+| URL / Address | Where it serves. A bare port works and becomes `localhost:PORT` | `5181` |
+| Tag | Small label on the card, usually the stack | `Next.js` |
+| Notes | Anything you will forget | `Seed data resets on restart` |
+
+### Run, stop, open
+
+Each card has five controls:
+
+| Control | What happens |
+|---|---|
+| **Run** | Opens a terminal window, `cd`s into the folder, runs the command. Real terminal, so you see the output and can Ctrl-C it |
+| Open in browser | Opens the card's URL |
+| Stop | Kills whatever process is holding that port. Useful when something is stuck |
+| Edit | Change any field |
+| Delete | Removes the card. Does not touch the project itself |
+
+The icon inside the URL box copies the address to your clipboard.
+
+The dot next to the URL is live status: green means that port is currently accepting connections,
+red means nothing is there. It re-checks every 12 seconds, and **Refresh status** forces it.
+
+Click the star to pin a card to the top. The search box matches name, project, URL, command, tag,
+category and notes at once, so searching `wordpress` or `5181` or `vite` all find the right card.
+
+### The one permanent port rule
+
+This is the part that makes saved cards stay useful, and it needs one step from you.
+
+When you add a project, give it a port nothing else uses, then **force the dev server to always use
+that exact port**. Most tools will silently pick a different one if the port is busy, which is what
+makes a saved entry go stale. Use the strict option so it fails loudly instead:
+
+| Tool | How to pin the port |
+|---|---|
+| Vite | `server: { port: 5181, strictPort: true }` in `vite.config`, or `vite --port 5181 --strictPort` |
+| Next.js | `next dev -p 5181` |
+| Astro | `astro dev --port 5181` |
+| create-react-app | `PORT=5181 react-scripts start` |
+| Express / plain Node | `process.env.PORT || 5181` |
+| PHP | `php -S localhost:5181` |
+
+Then put that same port in both the run command and the URL on the card.
+
+### Let Claude do it for you
+
+If you installed the skill, you never have to add cards by hand. Ask Claude Code to build something
+with a dev server and it registers the project itself, picks a port no other project is using, and
+writes that port into the config with the strict flag set.
+
+You can also just ask:
+
+> save this server to Server Studio
+
+To do it manually, or from a script:
+
+```bash
+node ~/.claude/skills/server-studio/register-server.js \
+  --name "Acme Dashboard" \
+  --cwd "$PWD" \
+  --command "npm run dev" \
+  --assign
+```
+
+`--assign` picks a free port and prints it, so you know what to write into the config. Re-running it
+for a project that already exists updates the other fields but keeps the port locked, which is the
+whole point.
+
+### Backups
+
+**Export** saves your whole list to `server-studio-backup.json`. **Import** loads one back.
+
+Note that Import **replaces** your entire list rather than merging into it, so export first if you
+have anything you care about.
+
 ## What's in the box
 
-**The app.** A local dashboard at `127.0.0.1:4587`. Run a server (it opens in a real terminal
-window), stop it, open its URL, reveal its folder, and see at a glance which ports are live.
+**The app**, a dashboard served at `127.0.0.1:4587`.
 
-**The Claude Code skill.** Ask Claude to build you something with a dev server and it registers the
-server for you, picking a free port and baking it into the project config so the port never drifts.
+**The Claude Code skill**, so Claude can register servers for you.
 
-**The Cowork plugin.** The same skill as a `/server-studio` command. Build it with
-`npm run build:plugin`, then open `dist/server-studio.plugin`.
+**The Cowork plugin**, the same skill as a `/server-studio` command. The installer copies it next to
+your data file and prints the path, then you open that file to install it. To rebuild it from source,
+run `npm run build:plugin`.
 
 ## Platform support
 
