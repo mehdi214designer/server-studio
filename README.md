@@ -1,5 +1,8 @@
 # Server Studio
 
+[![test](https://github.com/mehdi214designer/server-studio/actions/workflows/test.yml/badge.svg)](https://github.com/mehdi214designer/server-studio/actions/workflows/test.yml)
+[![npm](https://img.shields.io/npm/v/server-studio)](https://www.npmjs.com/package/server-studio)
+
 A small dashboard for the local dev servers you actually run.
 
 If you work on more than three or four projects, you know the routine. You want to show someone the
@@ -168,8 +171,12 @@ run `npm run build:plugin`.
 | Stop a port | `lsof` + `kill` | `netstat` + `taskkill` | `lsof` + `kill` |
 | Browse for a folder | native dialog | native dialog | needs `zenity`, otherwise type the path |
 
-Windows and Linux support is written but has only been exercised on macOS, so treat the first run
-on those platforms as unproven. Bug reports welcome.
+The suite runs on macOS, Linux and Windows in CI, on Node 18 and 22, so the installer, the data
+paths, the dashboard and the security checks are verified on all three.
+
+Two things CI cannot cover, because they need a real desktop session: opening a terminal window and
+the native folder picker. Those are the most likely places for a platform bug, so reports are
+welcome if something misbehaves there.
 
 ## Your data
 
