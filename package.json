@@ -18,7 +18,8 @@
   "scripts": {
     "build:plugin": "node scripts/build-plugin.js",
     "prepack": "node scripts/build-plugin.js",
-    "test": "node scripts/test.js"
+    "test": "node scripts/test.js",
+    "test:terminal": "node scripts/test-terminal.js"
   },
   "files": [
     "bin",

@@ -24,3 +24,28 @@ jobs:
         run: npm run build:plugin
       - name: Run the suite
         run: npm test
+
+  # Opening a terminal window needs a desktop session, which the job above has not
+  # got. Linux gets one from Xvfb; Windows is tried directly. macOS is verified by
+  # hand on a real machine, since its runners have no scriptable Terminal.
+  desktop:
+    name: terminal launch / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install a terminal and a virtual display
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb xterm
+      - name: Open a real terminal (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:terminal
+      - name: Open a real terminal (Windows)
+        if: runner.os == 'Windows'
+        run: npm run test:terminal
