@@ -94,6 +94,25 @@ function req(opts, body) {
 
     await new Promise(r => setTimeout(r, 300));
     check('no attack executed a command', !fs.existsSync(marker));
+
+    // The picker itself is a modal dialog and cannot be automated. What can be
+    // checked is the path that matters when the helper is missing: it must report
+    // cancelled instead of hanging or erroring. Skipped where a dialog would open
+    // and block this process.
+    let hasPicker = MAC || process.platform === 'win32';
+    if (!hasPicker) {
+      try { execFileSync('which', ['zenity'], { stdio: 'ignore' }); hasPicker = true; }
+      catch (e) { hasPicker = false; }
+    }
+    if (!hasPicker) {
+      const picked = await req({ method: 'POST', path: '/api/pickfolder' });
+      let cancelled = false;
+      try { cancelled = JSON.parse(picked.body).cancelled === true; } catch (e) {}
+      check('folder picker reports cancelled when no dialog is available',
+        picked.code === 200 && cancelled, 'got ' + picked.code + ' ' + picked.body);
+    } else {
+      console.log('  skip  folder picker, a dialog would block this process');
+    }
   }
   srv.kill();
 

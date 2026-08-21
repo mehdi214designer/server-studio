@@ -171,12 +171,16 @@ run `npm run build:plugin`.
 | Stop a port | `lsof` + `kill` | `netstat` + `taskkill` | `lsof` + `kill` |
 | Browse for a folder | native dialog | native dialog | needs `zenity`, otherwise type the path |
 
-The suite runs on macOS, Linux and Windows in CI, on Node 18 and 22, so the installer, the data
-paths, the dashboard and the security checks are verified on all three.
+The suite runs on macOS, Linux and Windows in CI, on Node 18 and 22. That covers the installer, the
+data paths, the dashboard, the security checks and the plugin build on all three.
 
-Two things CI cannot cover, because they need a real desktop session: opening a terminal window and
-the native folder picker. Those are the most likely places for a platform bug, so reports are
-welcome if something misbehaves there.
+Opening a terminal window is tested for real too, not just in theory: CI calls it, then checks the
+command actually ran in the right folder. Linux gets a desktop from Xvfb with xterm, Windows runs it
+directly, and macOS is verified by hand since its runners have no scriptable Terminal.
+
+The one thing left uncovered is the native folder picker, because a modal dialog cannot be
+automated. Its fallback is tested, so a machine with no dialog available reports cancelled rather
+than hanging, but the dialog itself has only been opened by hand on macOS.
 
 ## Your data
 
