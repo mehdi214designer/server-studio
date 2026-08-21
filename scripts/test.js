@@ -10,6 +10,7 @@ const http = require('http');
 const { execFileSync, spawn } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
+const MAC = process.platform === 'darwin';
 const SB = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-test-'));
 const PORT = 4400 + Math.floor(process.pid % 300);
 const env = {
@@ -40,10 +41,14 @@ function req(opts, body) {
   console.log('sandbox: ' + SB + '\n');
 
   // ---- installer ----
-  execFileSync('node', [path.join(ROOT, 'bin', 'cli.js'), 'install'], { env, stdio: 'ignore' });
-  check('app installed', fs.existsSync(path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'Resources', 'server.js')));
-  check('shared src copied into bundle', fs.existsSync(path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'Resources', 'platform.js')));
-  check('launcher is executable', (fs.statSync(path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'MacOS', 'ServerStudio')).mode & 0o111) !== 0);
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], { env, stdio: 'ignore' });
+  if (MAC) {
+    check('app installed', fs.existsSync(path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'Resources', 'server.js')));
+    check('shared src copied into bundle', fs.existsSync(path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'Resources', 'platform.js')));
+    check('launcher is executable', (fs.statSync(path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'MacOS', 'ServerStudio')).mode & 0o111) !== 0);
+  } else {
+    check('app bundle skipped off macOS', !fs.existsSync(env.SERVER_STUDIO_APP_DEST));
+  }
   check('skill installed', fs.existsSync(path.join(env.SERVER_STUDIO_SKILL_DEST, 'SKILL.md')));
   check('empty data file created', fs.readFileSync(path.join(env.SERVER_STUDIO_DATA_DIR, 'data.json'), 'utf8').trim() === '[]');
   // The path printed for the Cowork plugin must survive npx clearing its cache.
@@ -51,12 +56,15 @@ function req(opts, body) {
 
   // Existing data must survive a reinstall.
   fs.writeFileSync(path.join(env.SERVER_STUDIO_DATA_DIR, 'data.json'), '[{"id":"keep","name":"keep me"}]');
-  execFileSync('node', [path.join(ROOT, 'bin', 'cli.js'), 'install'], { env, stdio: 'ignore' });
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], { env, stdio: 'ignore' });
   check('reinstall keeps existing servers',
     JSON.parse(fs.readFileSync(path.join(env.SERVER_STUDIO_DATA_DIR, 'data.json'), 'utf8'))[0].id === 'keep');
 
   // ---- running server ----
-  const srv = spawn('node', [path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'Resources', 'server.js')],
+  const serverPath = MAC
+    ? path.join(env.SERVER_STUDIO_APP_DEST, 'Contents', 'Resources', 'server.js')
+    : path.join(ROOT, 'src', 'server.js');
+  const srv = spawn(process.execPath, [serverPath],
     { env: { ...env, PORT: String(PORT) }, stdio: ['ignore', 'pipe', 'pipe'] });
   const up = await new Promise(res => {
     const t = setTimeout(() => res(false), 5000);
@@ -66,7 +74,9 @@ function req(opts, body) {
 
   if (up) {
     const marker = path.join(SB, 'pwned.txt');
-    const payload = JSON.stringify({ command: 'touch ' + marker });
+    const payload = JSON.stringify({
+      command: process.platform === 'win32' ? 'type nul > "' + marker + '"' : 'touch ' + marker,
+    });
 
     const a1 = await req({ method: 'POST', path: '/api/run', headers: { 'Content-Type': 'text/plain' } }, payload);
     check('text/plain CSRF rejected', a1.code === 415, 'got ' + a1.code);
@@ -88,13 +98,45 @@ function req(opts, body) {
   srv.kill();
 
   // ---- uninstall ----
-  execFileSync('node', [path.join(ROOT, 'bin', 'cli.js'), 'uninstall'], { env, stdio: 'ignore' });
-  check('app removed', !fs.existsSync(env.SERVER_STUDIO_APP_DEST));
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'uninstall'], { env, stdio: 'ignore' });
+  if (MAC) check('app removed', !fs.existsSync(env.SERVER_STUDIO_APP_DEST));
   check('skill removed', !fs.existsSync(env.SERVER_STUDIO_SKILL_DEST));
   check('saved servers kept without --purge', fs.existsSync(path.join(env.SERVER_STUDIO_DATA_DIR, 'data.json')));
 
-  execFileSync('node', [path.join(ROOT, 'bin', 'cli.js'), 'uninstall', '--purge'], { env, stdio: 'ignore' });
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'uninstall', '--purge'], { env, stdio: 'ignore' });
   check('--purge deletes saved servers', !fs.existsSync(env.SERVER_STUDIO_DATA_DIR));
+
+  // ---- plugin build ----
+  // The archive is hand-written, so verify a real zip reader can open it and that
+  // the skill inside matches the source it was built from.
+  const zlib = require('zlib');
+  const pluginPath = path.join(ROOT, 'dist', 'server-studio.plugin');
+  if (fs.existsSync(pluginPath)) {
+    const buf = fs.readFileSync(pluginPath);
+    check('plugin has a zip signature', buf.readUInt32LE(0) === 0x04034b50);
+    check('plugin has an end-of-central-directory record',
+      buf.readUInt32LE(buf.length - 22) === 0x06054b50);
+    // Walk the local headers and inflate the skill file to prove the bytes are sound.
+    let off = 0, found = null, seen = 0;
+    while (off + 30 < buf.length && buf.readUInt32LE(off) === 0x04034b50) {
+      const method = buf.readUInt16LE(off + 8);
+      const compSize = buf.readUInt32LE(off + 18);
+      const nameLen = buf.readUInt16LE(off + 26);
+      const extraLen = buf.readUInt16LE(off + 28);
+      const name = buf.slice(off + 30, off + 30 + nameLen).toString('utf8');
+      const body = buf.slice(off + 30 + nameLen + extraLen, off + 30 + nameLen + extraLen + compSize);
+      if (name === 'skills/server-studio/SKILL.md') {
+        found = method === 8 ? zlib.inflateRawSync(body) : body;
+      }
+      seen++;
+      off += 30 + nameLen + extraLen + compSize;
+    }
+    check('plugin contains every entry', seen === 7, 'saw ' + seen);
+    check('skill inside plugin matches skill/ source',
+      !!found && found.equals(fs.readFileSync(path.join(ROOT, 'skill', 'SKILL.md'))));
+  } else {
+    check('plugin built', false, 'run npm run build:plugin first');
+  }
 
   // ---- platform shims ----
   // The real Windows and Linux behaviour cannot run here, so this only proves the
