@@ -1,6 +1,7 @@
 // Per-OS shims. Everything the dashboard does that is not plain Node lives here.
 'use strict';
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile, exec } = require('child_process');
@@ -46,9 +47,21 @@ function runInTerminal(cwd, command, cb) {
     ], cb);
   }
   if (WIN) {
-    // /k keeps the window open so the dev server keeps running and its output stays readable.
-    const line = (cwd ? 'cd /d "' + cwd + '" && ' : '') + command;
-    return execFile('cmd', ['/c', 'start', '', 'cmd', '/k', line], cb);
+    // The command goes into a .bat rather than onto cmd's command line. Node escapes
+    // embedded quotes as \" which cmd.exe does not accept as an escape, so passing a
+    // quoted path through `start cmd /k "..."` mangles it. A file has no such problem.
+    let bat;
+    try {
+      bat = path.join(os.tmpdir(), 'server-studio-' + Date.now() + '-' + process.pid + '.bat');
+      fs.writeFileSync(bat, [
+        '@echo off',
+        cwd ? 'cd /d "' + cwd + '"' : '',
+        command,
+      ].filter(Boolean).join('\r\n') + '\r\n');
+    } catch (e) { return cb(e); }
+    // The empty string is start's window-title argument, and /k keeps the window open
+    // so a dev server keeps running and its output stays readable.
+    return execFile('cmd', ['/c', 'start', '', 'cmd', '/k', bat], cb);
   }
   // Linux has no standard terminal, so try the common ones in turn.
   const line = (cwd ? 'cd ' + shQuote(cwd) + ' && ' : '') + command + '; exec $SHELL';

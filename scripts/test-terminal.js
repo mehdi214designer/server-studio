@@ -41,6 +41,22 @@ if (headless()) {
   finish(0, 'SKIP  no DISPLAY, cannot open a terminal window here');
 }
 
+// If nothing ran, find out whether ANY new console can be opened here. A build
+// agent with no interactive desktop cannot, and that is not a bug in this code.
+function probeConsole() {
+  if (!WIN) finish(1, 'FAIL  no marker after 25s, the command did not run');
+  const probe = path.join(SB, 'probe.txt');
+  execFile('cmd', ['/c', 'start', '', 'cmd', '/c', 'echo hi> "' + probe + '"'], () => {
+    setTimeout(() => {
+      if (fs.existsSync(probe)) {
+        finish(1, 'FAIL  a new console CAN be opened here, so runInTerminal is at fault');
+      }
+      finish(0, 'SKIP  this machine cannot open any new console window (no interactive ' +
+        'desktop), so the terminal path cannot be tested here');
+    }, 6000);
+  });
+}
+
 console.log('opening a terminal in ' + SB + ' ...');
 plat.runInTerminal(SB, command, err => {
   if (err) finish(1, 'FAIL  runInTerminal errored: ' + err.message);
@@ -64,7 +80,7 @@ plat.runInTerminal(SB, command, err => {
     waited += 500;
     if (waited >= 25000) {
       clearInterval(tick);
-      finish(1, 'FAIL  no marker after 25s, the command did not run');
+      probeConsole();
     }
   }, 500);
 });
