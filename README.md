@@ -25,19 +25,20 @@ Node.js is the only requirement. No npm install inside the app, no Electron, no 
 
 ## Install
 
-Installing the package only puts the `server-studio` command on your PATH. Setting up the app and
-the skill is a second, explicit step, because it writes outside the package. Either of these works:
+```bash
+npm install -g server-studio
+```
+
+That is the whole thing. A global install sets up the app and the skill for you.
+
+If you would rather not install globally, this does the same without leaving anything behind:
 
 ```bash
 npx server-studio install
 ```
 
-```bash
-npm install -g server-studio && server-studio install
-```
-
-Running `server-studio` with no arguments does the same thing as `server-studio install`, so if you
-installed globally and typed the bare command, you are already set up.
+Installing this as a project dependency deliberately does **not** set anything up, since that would
+write outside the package on a machine that only wanted the library.
 
 **macOS**
 
@@ -154,6 +155,22 @@ node ~/.claude/skills/server-studio/register-server.js \
 for a project that already exists updates the other fields but keeps the port locked, which is the
 whole point.
 
+### Using it from any editor or script
+
+The Claude skill is a convenience wrapper, not the mechanism. Registering a server is a plain
+command with no AI involved, so any tool that can run a shell command can use it. That includes
+Cursor, Copilot, Windsurf, a Makefile, a shell alias, or you:
+
+```bash
+server-studio add --name "Portfolio Site" --cwd "$PWD" --command "npm run dev" --assign
+```
+
+`--assign` picks a port nothing else uses and prints `PORT <n>`, so a script can read that line and
+write the port into the project config. Re-running for the same project updates its fields and keeps
+its port locked, which is what makes this safe to call from a build step.
+
+Run `server-studio add` with no arguments for the full list of fields.
+
 ### Backups
 
 **Export** saves your whole list to `server-studio-backup.json`. **Import** loads one back.
@@ -165,7 +182,8 @@ have anything you care about.
 
 **The app**, a dashboard served at `127.0.0.1:4587`.
 
-**The Claude Code skill**, so Claude can register servers for you.
+**The Claude Code skill**, so Claude can register servers for you. It wraps
+`server-studio add`, which works on its own from any tool.
 
 **The Cowork plugin**, the same skill as a `/server-studio` command. The installer copies it next to
 your data file and prints the path, then you open that file to install it. To rebuild it from source,

@@ -125,6 +125,24 @@ function req(opts, body) {
   execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'uninstall', '--purge'], { env, stdio: 'ignore' });
   check('--purge deletes saved servers', !fs.existsSync(env.SERVER_STUDIO_DATA_DIR));
 
+  // ---- the add command, which must work without Claude anywhere near it ----
+  const addDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-add-'));
+  const addEnv = { ...process.env, SERVER_STUDIO_DATA_DIR: addDir };
+  const cli = path.join(ROOT, 'bin', 'cli.js');
+  const first = execFileSync(process.execPath,
+    [cli, 'add', '--name', 'Demo', '--cwd', addDir, '--command', 'npm run dev', '--assign'],
+    { env: addEnv, encoding: 'utf8' });
+  const port = (first.match(/PORT (\d+)/) || [])[1];
+  check('add registers a server and prints its port', !!port, first.trim());
+  execFileSync(process.execPath,
+    [cli, 'add', '--name', 'Demo', '--cwd', addDir, '--command', 'npm start', '--assign'],
+    { env: addEnv, encoding: 'utf8' });
+  const rows = JSON.parse(fs.readFileSync(path.join(addDir, 'data.json'), 'utf8'));
+  check('re-adding the same project keeps one entry', rows.length === 1, 'got ' + rows.length);
+  check('re-adding keeps the port locked', rows[0].url.includes(port), rows[0].url);
+  check('re-adding updates the other fields', rows[0].command === 'npm start', rows[0].command);
+  fs.rmSync(addDir, { recursive: true, force: true });
+
   // ---- plugin build ----
   // The archive is hand-written, so verify a real zip reader can open it and that
   // the skill inside matches the source it was built from.

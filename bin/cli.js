@@ -139,6 +139,35 @@ function uninstall() {
   }
 }
 
+// The registration script has nothing Claude-specific in it, so it is exposed as a
+// plain command too. Any editor, agent or shell script can call this.
+function add() {
+  const { spawnSync } = require('child_process');
+  const script = path.join(ROOT, 'skill', 'register-server.js');
+  const passthrough = args.filter(a => a !== 'add');
+  if (!passthrough.length) {
+    console.log(`Add or update a server from the command line.
+
+  server-studio add --name "Portfolio Site" --cwd "$PWD" --command "npm run dev" --assign
+
+  --name       what to call it
+  --project    a line of context
+  --category   groups cards into filter tabs
+  --cwd        the project folder
+  --command    how to start it
+  --url        address or bare port; omit with --assign
+  --tag        small label, usually the stack
+  --note       anything to remember
+  --assign     pick a free port nothing else uses, and print it
+  --force      allow an existing project to move to a different port
+
+Re-running for the same project updates its fields but keeps its port locked.`);
+    return;
+  }
+  const r = spawnSync(process.execPath, [script, ...passthrough], { stdio: 'inherit' });
+  process.exit(r.status === null ? 1 : r.status);
+}
+
 function start() {
   DATA_DIR = dataDir();
   const { spawn } = require('child_process');
@@ -153,6 +182,7 @@ function help() {
 
   npx server-studio install      install the app + Claude Code skill
   npx server-studio start        run the dashboard (works on macOS, Windows and Linux)
+  npx server-studio add ...      save a server from the command line
   npx server-studio uninstall    remove them (keeps your saved servers)
 
 Options
@@ -166,5 +196,6 @@ Options
 if (cmd === 'help') help();
 else if (cmd === 'install') install();
 else if (cmd === 'start') start();
+else if (cmd === 'add') add();
 else if (cmd === 'uninstall') uninstall();
 else { console.error('unknown command: ' + cmd + '\n'); help(); process.exit(1); }
