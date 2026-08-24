@@ -42,7 +42,7 @@ jobs:
           node-version: 22
       - name: Install a terminal and a virtual display
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y xvfb xterm
+        run: sudo apt-get update && sudo apt-get install -y xvfb xterm zenity
       - name: Open a real terminal (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run test:terminal
