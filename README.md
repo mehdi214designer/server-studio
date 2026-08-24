@@ -25,13 +25,23 @@ Node.js is the only requirement. No npm install inside the app, no Electron, no 
 
 ## Install
 
-**macOS**
+Installing the package only puts the `server-studio` command on your PATH. Setting up the app and
+the skill is a second, explicit step, because it writes outside the package. Either of these works:
 
 ```bash
 npx server-studio install
 ```
 
-That copies the app to `/Applications` and installs the Claude Code skill. Then open it from
+```bash
+npm install -g server-studio && server-studio install
+```
+
+Running `server-studio` with no arguments does the same thing as `server-studio install`, so if you
+installed globally and typed the bare command, you are already set up.
+
+**macOS**
+
+`install` copies the app to `/Applications` and installs the Claude Code skill. Then open it from
 Applications, or:
 
 ```bash
@@ -46,7 +56,7 @@ There is no app bundle to install, so run the dashboard directly:
 npx server-studio start
 ```
 
-It serves the same dashboard at `http://localhost:4587` and opens your browser. Add
+It serves the same dashboard at `http://localhost:4587` and opens your browser. Run
 `npx server-studio install --no-app` first if you also want the Claude Code skill.
 
 To remove it again:

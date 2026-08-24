@@ -1,6 +1,6 @@
 {
   "name": "server-studio",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A tiny dashboard for your local dev servers. One click to run, stop and open them, with one permanent port per project.",
   "author": "Md Mahdi Hasan",
   "license": "MIT",
@@ -19,10 +19,12 @@
     "build:plugin": "node scripts/build-plugin.js",
     "prepack": "node scripts/build-plugin.js",
     "test": "node scripts/test.js",
-    "test:terminal": "node scripts/test-terminal.js"
+    "test:terminal": "node scripts/test-terminal.js",
+    "postinstall": "node scripts/postinstall.js"
   },
   "files": [
     "bin",
+    "scripts/postinstall.js",
     "app",
     "src",
     "skill",
