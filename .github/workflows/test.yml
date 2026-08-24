@@ -49,3 +49,9 @@ jobs:
       - name: Open a real terminal (Windows)
         if: runner.os == 'Windows'
         run: npm run test:terminal
+      - name: Open the folder picker (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:picker
+      - name: Open the folder picker (Windows)
+        if: runner.os == 'Windows'
+        run: npm run test:picker

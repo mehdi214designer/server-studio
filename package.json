@@ -20,7 +20,8 @@
     "prepack": "node scripts/build-plugin.js",
     "test": "node scripts/test.js",
     "test:terminal": "node scripts/test-terminal.js",
-    "postinstall": "node scripts/postinstall.js"
+    "postinstall": "node scripts/postinstall.js",
+    "test:picker": "node scripts/test-picker.js"
   },
   "files": [
     "bin",
