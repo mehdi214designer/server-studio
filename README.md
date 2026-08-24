@@ -206,9 +206,16 @@ Opening a terminal window is tested for real too, not just in theory: CI calls i
 command actually ran in the right folder. Linux gets a desktop from Xvfb with xterm, Windows runs it
 directly, and macOS is verified by hand since its runners have no scriptable Terminal.
 
-The one thing left uncovered is the native folder picker, because a modal dialog cannot be
-automated. Its fallback is tested, so a machine with no dialog available reports cancelled rather
-than hanging, but the dialog itself has only been opened by hand on macOS.
+The **Browse** button is the one thing left uncovered, because a modal dialog blocks waiting for a
+click that never comes on a build agent. What has been checked:
+
+- On macOS the dialog really opens, and cancelling it returns cleanly rather than hanging.
+- On a machine with no picker available, the app reports cancelled instead of erroring. Linux
+  without `zenity` takes this path, and CI verifies it.
+- Choosing an actual folder, and the Windows and Linux dialogs, have not been machine-tested.
+
+If Browse ever does nothing on your system, type the path into the field instead. Nothing else
+depends on it.
 
 ## Your data
 
