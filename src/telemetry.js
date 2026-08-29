@@ -91,12 +91,19 @@ function post(pathname, obj, timeout, keepAlive) {
       });
       req.on('error', () => resolve({ ok: false }));
       req.on('timeout', () => { req.destroy(); resolve({ ok: false }); });
-      req.end(payload);
       // Never keep the process alive for a ping. On a network that cannot reach the
       // endpoint this is the difference between exiting now and waiting out the
       // timeout. A ping that would not have arrived is not worth a second of anyone's
       // install. Subscribe passes keepAlive because a person is waiting on the answer.
-      if (!keepAlive && typeof req.unref === 'function') req.unref();
+      //
+      // The socket has to be unref'd as well as the request. On Node 18 unref'ing the
+      // request before a socket exists does not propagate, and the process sat there
+      // for seconds on a blocked network.
+      if (!keepAlive) {
+        req.on('socket', sock => { if (sock && typeof sock.unref === 'function') sock.unref(); });
+        if (typeof req.unref === 'function') req.unref();
+      }
+      req.end(payload);
     } catch (e) { resolve({ ok: false }); }
   });
 }

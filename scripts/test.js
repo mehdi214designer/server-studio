@@ -233,8 +233,13 @@ function req(opts, body) {
     try { loadTelemetry({ SERVER_STUDIO_ANALYTICS_URL: 'https://example.invalid', DO_NOT_TRACK: '1' }).ping('start'); return true; }
     catch (e) { return false; }
   })());
-  check('the request is unref\'d so it cannot hold a process open',
-    /req\.unref\(\)/.test(fs.readFileSync(path.join(ROOT, 'src', 'telemetry.js'), 'utf8')));
+  (function () {
+    const t = fs.readFileSync(path.join(ROOT, 'src', 'telemetry.js'), 'utf8');
+    check('the request is unref\'d so it cannot hold a process open', /req\.unref\(\)/.test(t));
+    // Node 18 does not propagate an early req.unref() to the socket, so the socket
+    // must be unref'd too or a blocked network stalls the process for seconds.
+    check('the socket is unref\'d as well, which Node 18 needs', /sock\.unref\(\)/.test(t));
+  })();
   check('README documents telemetry and the opt-out', (() => {
     const r = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
     return /^## Telemetry/m.test(r) && r.includes('SERVER_STUDIO_NO_TELEMETRY');
