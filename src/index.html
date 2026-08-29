@@ -57,8 +57,13 @@
   .f-item.drop { border-color: var(--accent); background: var(--accent-soft); }
   .f-item svg { flex: none; opacity: .8; }
   .f-item .f-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .f-item .n { font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
-  .f-item .f-edit { opacity: 0; border: 0; background: transparent; color: var(--text-faint); cursor: pointer; padding: 2px; border-radius: 5px; display: flex; }
+  .f-item .n { font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums;
+               margin-left: auto; text-align: right; min-width: 18px; }
+  /* Always present so every row reserves the same width, otherwise the counts on
+     editable and non-editable rows land on different x positions. */
+  .f-item .f-edit { opacity: 0; border: 0; background: transparent; color: var(--text-faint);
+                    cursor: pointer; padding: 2px; border-radius: 5px; display: flex; flex: none; }
+  .f-item .f-edit[disabled] { visibility: hidden; pointer-events: none; }
   .f-item:hover .f-edit { opacity: 1; }
   .f-item .f-edit:hover { color: var(--text); background: var(--border-soft); }
   .f-sep { height: 1px; background: var(--border-soft); margin: 8px 4px; }
@@ -92,14 +97,19 @@
   .help-btn:hover { color: var(--text); border-color: var(--text-faint); }
 
   /* ---------- version pill / update affordance ---------- */
+  /* Plain text while current, so its left edge matches the title and subtitle above it.
+     It only becomes a pill when there is something to act on. */
   .ver {
-    display: inline-flex; align-items: center; gap: 6px; margin-top: 7px;
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
-    color: var(--text-faint); background: var(--bg-soft); border: 1px solid var(--border);
-    padding: 3px 8px; border-radius: 999px; border-radius: 999px;
+    color: var(--text-faint); background: transparent; border: 0;
+    padding: 0; border-radius: 999px;
   }
   .ver.has-update {
     color: var(--green); border-color: rgba(62,207,142,.4); background: var(--green-soft);
+    /* padding + border would push the text right, so pull the box back by the same
+       amount and the version stays on the title's left edge in both states. */
+    padding: 3px 9px; border-width: 1px; border-style: solid; margin-left: -10px;
     cursor: pointer; animation: verPulse 2.4s ease-in-out 6;
   }
   .ver.has-update:hover { background: rgba(62,207,142,.24); }
@@ -114,16 +124,11 @@
   /* ---------- creator badge, sidebar bottom ---------- */
   .credit { flex: none; margin-top: auto; }
   .credit a {
-    display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 10px;
+    display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 10px;
     border: 1px solid var(--border); background: var(--bg-soft);
     text-decoration: none; transition: border-color .15s, background .15s, transform .15s;
   }
   .credit a:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
-  .credit .mark {
-    flex: none; width: 26px; height: 26px; border-radius: 8px;
-    display: grid; place-items: center;
-    background: linear-gradient(135deg, var(--accent), #8ea3ff);
-    color: #0c0d10; font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
   }
   .credit .who { min-width: 0; line-height: 1.25; }
   .credit .who b { display: block; font-size: 12.5px; font-weight: 600; color: var(--text);
@@ -358,7 +363,6 @@
 
     <div class="credit">
       <a href="https://www.mahdicreates.com" target="_blank" rel="noopener noreferrer" title="Made by Md Mahdi Hasan - mahdicreates.com">
-        <span class="mark">MH</span>
         <span class="who"><span>Creator</span><b>Md Mahdi Hasan</b></span>
         <svg class="go" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
       </a>
@@ -609,7 +613,9 @@ function renderFolders() {
       icon +
       '<span class="f-name">' + esc(label) + '</span>' +
       '<span class="n">' + countIn(key) + '</span>' +
-      (editable ? '<button class="f-edit" data-edit="' + key + '" title="Rename or delete">' + ICON_PEN + '</button>' : '') +
+      (editable
+        ? '<button class="f-edit" data-edit="' + key + '" title="Rename or delete">' + ICON_PEN + '</button>'
+        : '<button class="f-edit" disabled tabindex="-1" aria-hidden="true">' + ICON_PEN + '</button>') +
     '</div>';
 
   let html = row('all', ICON_ALL, 'All servers', false);
