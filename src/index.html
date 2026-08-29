@@ -288,6 +288,17 @@
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .folder-row { display: flex; gap: 8px; }
   .folder-row input { flex: 1; }
+  .dlg { max-width: 420px; }
+  .dlg .body { color: var(--text-dim); font-size: 13.5px; line-height: 1.6; white-space: pre-line; margin-bottom: 18px; }
+  .dlg .body strong { color: var(--text); font-weight: 600; }
+  .dlg input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+    color: var(--text); padding: 10px 12px; font: inherit; font-size: 14px; margin-bottom: 4px;
+  }
+  .dlg input:focus { outline: none; border-color: var(--accent); }
+  .dlg .hint { color: var(--text-faint); font-size: 12px; margin-top: 8px; }
+  .btn-danger { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn-danger:hover { background: #ff6a7d; border-color: #ff6a7d; }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
 
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 12px 18px; border-radius: 11px; font-size: 13.5px; box-shadow: var(--shadow); opacity: 0; transition: all 0.25s; z-index: 80; display: flex; align-items: center; gap: 9px; }
@@ -410,6 +421,19 @@
 
   </main>
  </div>
+</div>
+
+<div class="overlay" id="dlgOverlay">
+  <div class="modal dlg">
+    <h2 id="dlgTitle"></h2>
+    <div class="sub" id="dlgSub" style="display:none"></div>
+    <div class="body" id="dlgBody"></div>
+    <input type="text" id="dlgInput" style="display:none">
+    <div class="modal-actions">
+      <button class="btn-ghost" id="dlgCancel">Cancel</button>
+      <button class="btn-primary" id="dlgOk">OK</button>
+    </div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay">
@@ -631,8 +655,9 @@ function renderFolders() {
 
 function setFolder(k) { activeFolder = k; render(); }
 
-function newFolder() {
-  const name = (prompt('Folder name') || '').trim();
+async function newFolder() {
+  const raw = await ssPrompt('New folder', { placeholder: 'Client work', okText: 'Create' });
+  const name = (raw || '').trim();
   if (!name) return;
   if (folders.some(f => f.name.toLowerCase() === name.toLowerCase())) { toast('A folder with that name already exists.', true); return; }
   const f = { id: 'f_' + Math.random().toString(36).slice(2, 9), name: name };
@@ -641,17 +666,22 @@ function newFolder() {
   toast('Folder "' + name + '" created');
 }
 
-function editFolder(id) {
+async function editFolder(id) {
   const f = folders.find(x => x.id === id);
   if (!f) return;
-  const name = prompt('Rename folder, or clear the box to delete it', f.name);
+  const name = await ssPrompt('Rename folder', {
+    value: f.name, okText: 'Rename',
+    body: 'Clear the box and save to delete this folder instead.',
+  });
   if (name === null) return;
   const trimmed = name.trim();
   if (!trimmed) {
     const n = countIn(id);
-    const msg = n ? 'Delete "' + f.name + '"? Its ' + n + ' server' + (n === 1 ? '' : 's') + ' will move to Unfiled, nothing is deleted.'
-                  : 'Delete "' + f.name + '"?';
-    if (!confirm(msg)) return;
+    const ok = await ssConfirm('Delete "' + f.name + '"?',
+      n ? 'Its ' + n + ' server' + (n === 1 ? '' : 's') + ' will move to Unfiled. Nothing is deleted.'
+        : 'This folder is empty.',
+      { okText: 'Delete folder', danger: true });
+    if (!ok) return;
     folders = folders.filter(x => x.id !== id);
     servers.forEach(s => { if (s.folder === id) delete s.folder; });
     if (activeFolder === id) activeFolder = 'all';
@@ -732,7 +762,7 @@ async function fixPortClash(e, id) {
         '\n           becomes ' + JSON.stringify(plan.after) + '\n\nA backup of package.json is kept.'
       : 'The project config cannot be updated automatically (' + plan.reason + ').\n' +
         'Only the card changes, so set port ' + newPort + ' in the project yourself.');
-  if (!confirm(msg)) return;
+  if (!(await ssConfirm('Move to port ' + newPort + '?', msg, { okText: 'Move' }))) return;
 
   if (plan.ok) {
     let applied = { ok: false };
@@ -752,307 +782,50 @@ async function fixPortClash(e, id) {
                 : 'Card moved to ' + newPort + '. Set it in the project too.');
 }
 
-function moveToFolder(serverId, folderId) {
-  const s = servers.find(x => x.id === serverId);
-  if (!s) return;
-  if (folderId) s.folder = folderId; else delete s.folder;
-  persist(); render();
-  toast(folderId ? 'Moved to ' + folderName(folderId) : 'Moved out of the folder');
+/* ---------- in-app dialogs, so no "localhost says" boxes ---------- */
+let dlgResolve = null;
+
+function closeDlg(value) {
+  const o = document.getElementById('dlgOverlay');
+  o.classList.remove('open');
+  const r = dlgResolve; dlgResolve = null;
+  if (r) r(value);
 }
 
-function refreshFolderList() {
-  const sel = document.getElementById('f_folder');
-  if (!sel) return;
-  const keep = sel.value;
-  sel.innerHTML = '<option value="">No folder</option>' +
-    folders.map(f => '<option value="' + esc(f.id) + '">' + esc(f.name) + '</option>').join('');
-  sel.value = keep;
-}
-
-/* ---------- render ---------- */
-function render() {
-  const q = document.getElementById('search').value.toLowerCase().trim();
-  const grid = document.getElementById('grid');
-  const empty = document.getElementById('empty');
-
-  if (activeFolder !== 'all' && activeFolder !== 'none' && !folders.some(f => f.id === activeFolder)) activeFolder = 'all';
-  renderFolders();
-  refreshFolderList();
-
-  const inFolder = s => {
-    if (activeFolder === 'all') return true;
-    if (activeFolder === 'none') return !s.folder || !folders.some(f => f.id === s.folder);
-    return s.folder === activeFolder;
-  };
-  let list = servers.filter(s =>
-    inFolder(s) &&
-    (!q || [s.name, s.project, s.url, s.tag, folderName(s.folder), s.command, s.note].join(' ').toLowerCase().includes(q))
-  );
-  list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-
-  // A port used by more than one project breaks the promise that a saved card keeps
-  // working, so say so on both cards rather than letting it fail silently later.
-  const portUse = {};
-  servers.forEach(s => { const p = portOf(s); if (p) (portUse[p] = portUse[p] || []).push(s.id); });
-  const clash = id => { const p = portOf(servers.find(x => x.id === id) || {}); return p && portUse[p] && portUse[p].length > 1; };
-
-  document.getElementById('countTotal').textContent = servers.length;
-  document.getElementById('countUp').textContent = servers.filter(s => s._status === 'up').length;
-
-  if (servers.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
-  empty.style.display = 'none';
-  if (list.length === 0) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">No servers match.</div>'; return; }
-
-  grid.innerHTML = list.map(s => {
-    const url = normalizeUrl(s.url);
-    const st = s._status || 'unknown';
-    const port = portOf(s);
-    return `
-    <div class="card ${s.pinned ? 'pinned' : ''}" draggable="true" data-id="${s.id}">
-      <div class="card-top">
-        <div class="card-name">
-          <button class="pin-star ${s.pinned ? 'on' : ''}" onclick="togglePin('${s.id}')" title="Pin to top">${s.pinned ? '★' : '☆'}</button>
-          ${esc(s.name) || 'Untitled'}
-        </div>
-        <div class="badges">
-          ${s.folder && folderName(s.folder) ? `<span class="cat">${esc(folderName(s.folder))}</span>` : ''}
-          ${s.tag ? `<span class="tag">${esc(s.tag)}</span>` : ''}
-        </div>
-      </div>
-      ${s.project ? `<div class="project">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        ${esc(s.project)}</div>` : ''}
-      ${url ? `<div class="url-row">
-        <span class="status ${st === 'unknown' ? '' : st}" title="${st}"></span>
-        <span class="url-text">${esc(url.replace(/^https?:\/\//, ''))}</span>${clash(s.id) ? `<button class="conflict" onclick="fixPortClash(event, '${s.id}')" title="Another project already uses this port. Click to move this one to a free port.">port clash &middot; fix</button>` : ''}
-        <button style="padding:2px 4px;border:none;background:none;color:var(--text-faint)" onclick="copyUrl('${url}', this)" title="Copy URL">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        </button>
-      </div>` : ''}
-      ${s.command ? `<div class="cmd-line">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-        <span>${esc(s.command)}</span></div>` : ''}
-      ${s.command && !s.cwd ? `<div class="note" style="color:var(--amber)">No project folder set, so Run has nowhere to go. Add one in Edit.</div>` : ''}
-      ${s.note ? `<div class="note">${esc(s.note)}</div>` : ''}
-      <div class="card-actions">
-        ${s.command || port
-          ? (st === 'checking'
-              ? `<button class="btn btn-busy main" disabled>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg> Working</button>`
-              : st === 'up' && port
-                ? `<button class="btn btn-stop main" onclick="stopServer('${s.id}')" title="Stop whatever is on port ${port}">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> Stop</button>`
-                : s.command
-                  ? `<button class="btn btn-run main" onclick="runServer('${s.id}')" title="Run">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20 6 4"/></svg> Run</button>`
-                  : '')
-          : ''}
-        ${url
-          ? `<a class="btn ${s.command ? '' : 'btn-primary main'}" href="${url}" target="_blank" rel="noopener" title="Open in browser">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${s.command ? '' : ' Open'}</a>`
-          : ''}
-        <button class="icon-btn" onclick="openMoveMenu(event, '${s.id}')" title="Move to folder">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-        </button>
-        <button class="icon-btn" onclick="editServer('${s.id}')" title="Edit">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
-        <button class="icon-btn" onclick="delServer('${s.id}')" title="Delete">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-/* ---------- actions ---------- */
-async function runServer(id) {
-  const s = servers.find(x => x.id === id);
-  if (!s || !s.command) return;
-  // With no folder the command runs in the home directory, where it either fails with
-  // something confusing like "Missing script: dev" or, worse, does something unintended.
-  if (!s.cwd) {
-    toast('No project folder set for "' + (s.name || 'this server') + '". Set it first.', true);
-    openModal(id);
-    setTimeout(() => { const el = document.getElementById('f_cwd'); if (el) el.focus(); }, 120);
-    return;
-  }
-  const r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cwd: s.cwd || '', command: s.command }) });
-  if (r.ok) {
-    toast('Running "' + (s.name || 'server') + '" in ' + TERM_NAME);
-    if (portOf(s)) { s._status = 'checking'; render(); }
-    setTimeout(() => refreshStatus(), 3500);
-  } else toast('Could not run: ' + (r.error || 'error'), true);
-}
-async function stopServer(id) {
-  const s = servers.find(x => x.id === id);
-  const port = portOf(s);
-  if (!port) return;
-  s._status = 'checking'; render();
-  await api('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ port }) });
-  toast('Stopped whatever was on port ' + port);
-  setTimeout(() => refreshStatus(), 700);
-}
-function copyUrl(url, btn) {
-  navigator.clipboard.writeText(url).then(() => {
-    const old = btn.innerHTML;
-    btn.innerHTML = '<span style="color:var(--green);font-size:11px">copied</span>';
-    setTimeout(() => btn.innerHTML = old, 1200);
+function openDlg(opts) {
+  return new Promise(resolve => {
+    if (dlgResolve) closeDlg(null);
+    dlgResolve = resolve;
+    const o = document.getElementById('dlgOverlay');
+    document.getElementById('dlgTitle').textContent = opts.title || '';
+    const body = document.getElementById('dlgBody');
+    body.textContent = opts.body || '';
+    body.style.display = opts.body ? '' : 'none';
+    const input = document.getElementById('dlgInput');
+    if (opts.input) {
+      input.style.display = '';
+      input.value = opts.value || '';
+      input.placeholder = opts.placeholder || '';
+    } else input.style.display = 'none';
+    const ok = document.getElementById('dlgOk');
+    ok.textContent = opts.okText || 'OK';
+    ok.className = opts.danger ? 'btn-danger' : 'btn-primary';
+    document.getElementById('dlgCancel').textContent = opts.cancelText || 'Cancel';
+    o.classList.add('open');
+    setTimeout(() => (opts.input ? input : ok).focus(), 60);
   });
 }
 
-/* ---------- crud ---------- */
-function openModal(id) {
-  document.getElementById('overlay').classList.add('open');
-  document.getElementById('modalTitle').textContent = id ? 'Edit server' : 'Add server';
-  document.getElementById('editId').value = id || '';
-  const s = servers.find(x => x.id === id) || {};
-  f_name.value = s.name || ''; f_project.value = s.project || ''; f_folder.value = s.folder || '';
-  f_cwd.value = s.cwd || ''; f_command.value = s.command || ''; f_url.value = s.url || '';
-  f_tag.value = s.tag || ''; f_note.value = s.note || '';
-  setTimeout(() => f_name.focus(), 50);
+// Drop-in replacements for the browser's own dialogs.
+function ssConfirm(title, body, opts) {
+  opts = opts || {};
+  return openDlg({ title, body, okText: opts.okText || 'Confirm', danger: opts.danger })
+    .then(v => v !== null);
 }
-function closeModal() { document.getElementById('overlay').classList.remove('open'); }
-function saveServer() {
-  const id = document.getElementById('editId').value;
-  const data = {
-    name: f_name.value.trim(), project: f_project.value.trim(), folder: f_folder.value || '',
-    cwd: f_cwd.value.trim(), command: f_command.value.trim(), url: f_url.value.trim(),
-    tag: f_tag.value.trim(), note: f_note.value.trim(),
-  };
-  if (!data.name && !data.url && !data.command) { toast('Add at least a name, URL or command.', true); return; }
-
-  // The whole point of this app is one permanent port per project, so catch a collision
-  // here rather than letting two cards fight over a port and fail at run time.
-  const wanted = portOf(data);
-  if (wanted) {
-    const taken = servers.find(x => x.id !== id && portOf(x) === wanted);
-    if (taken) {
-      const free = nextFreePort(id);
-      const useFree = confirm(
-        'Port ' + wanted + ' is already used by "' + (taken.name || 'another server') + '".\n\n' +
-        'Two projects on one port means whichever starts second fails.\n\n' +
-        'OK to use port ' + free + ' instead, or Cancel to keep ' + wanted + ' anyway.'
-      );
-      if (useFree) {
-        const rx = new RegExp('\\b' + wanted + '\\b', 'g');
-        data.url = String(data.url || '').replace(rx, String(free));
-        if (data.command) data.command = data.command.replace(rx, String(free));
-        toast('Using port ' + free + '. Set it in the project config too.');
-      }
-    }
-  }
-
-  if (id) { Object.assign(servers.find(x => x.id === id), data); }
-  else { servers.push({ id: uid(), pinned: false, ...data }); }
-  persist(); closeModal(); render(); refreshStatus();
-}
-function editServer(id) { openModal(id); }
-function delServer(id) {
-  const s = servers.find(x => x.id === id);
-  if (confirm(`Delete "${s.name || 'this server'}"? This only removes it from the list.`)) {
-    servers = servers.filter(x => x.id !== id); persist(); render();
-  }
-}
-function togglePin(id) { const s = servers.find(x => x.id === id); s.pinned = !s.pinned; persist(); render(); }
-
-async function browseFolder() {
-  const r = await api('/api/pickfolder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-  if (r.path) f_cwd.value = r.path;
-}
-
-/* ---------- status ---------- */
-async function refreshStatus() {
-  servers.forEach(s => { if (portOf(s)) s._status = 'checking'; });
-  render();
-  try {
-    const map = await api('/api/status');
-    servers.forEach(s => { s._status = map[s.id] ? 'up' : (portOf(s) ? 'down' : 'unknown'); });
-  } catch (e) {}
-  render();
-}
-
-/* ---------- export / import ---------- */
-function exportData() {
-  const clean = servers.map(({ _status, ...rest }) => rest);
-  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'server-studio-backup.json'; a.click();
-}
-function importData(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (!Array.isArray(data)) throw 0;
-      data.forEach(d => { if (!d.id) d.id = uid(); });
-      servers = data; persist(); render(); refreshStatus();
-      toast('Imported ' + data.length + ' servers');
-    } catch { toast('That file is not a valid backup.', true); }
-  };
-  reader.readAsText(file);
-}
-
-/* ---------- one-time migration from old browser version ---------- */
-async function migrateFromLocalStorage() {
-  if (servers.length) return;
-  try {
-    const old = JSON.parse(localStorage.getItem('local_server_dashboard_v1') || '[]');
-    if (Array.isArray(old) && old.length) { servers = old; persist(); toast('Imported your previous list'); }
-  } catch (e) {}
-}
-
-/* ---------- email signup ---------- */
-/* ---------- ask box: requests + email, docked bottom-left ---------- */
-function showAsk(open) {
-  const box = document.getElementById('ask');
-  const btn = document.getElementById('helpBtn');
-  if (!box || !btn) return;
-  box.style.display = open ? '' : 'none';
-  btn.style.display = open ? 'none' : '';
-}
-
-async function initAsk() {
-  try {
-    const r = await api('/api/subscribe');   // GET -> { enabled }
-    if (!r || !r.enabled) { showAsk(false); document.getElementById('helpBtn').style.display = 'none'; return; }
-    const state = localStorage.getItem('ss_ask');
-    showAsk(state !== 'hide');
-  } catch (e) {
-    showAsk(false);
-    const b = document.getElementById('helpBtn'); if (b) b.style.display = 'none';
-  }
-}
-
-function dismissAsk() {
-  localStorage.setItem('ss_ask', 'hide');
-  showAsk(false);
-  // Tell them where it went, once, so it does not feel like it vanished.
-  toast('Moved to "Request a feature" in the sidebar. Open it any time.');
-}
-
-async function sendAsk(e) {
-  e.preventDefault();
-  const email = document.getElementById('askEmail').value.trim();
-  const message = document.getElementById('askMsg').value.trim();
-  const btn = document.getElementById('askBtn');
-  if (!email) return;
-  btn.disabled = true; btn.textContent = 'Sending...';
-  let ok = false;
-  try {
-    const r = await api('/api/subscribe', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, message: message }),
-    });
-    ok = !!(r && r.ok);
-  } catch (err) { ok = false; }
-  btn.disabled = false; btn.textContent = 'Send';
-  if (ok) {
-    document.getElementById('ask').innerHTML =
-      '<div class="ask-ok">Thanks. ' + (message ? 'I read every one of these.' : 'You are on the list.') + '</div>';
-    localStorage.setItem('ss_ask', 'done');
-    setTimeout(function () { showAsk(false); }, 2600);
-  } else {
-    toast('Could not send that. Try again in a moment.', true);
-  }
+function ssPrompt(title, opts) {
+  opts = opts || {};
+  return openDlg({ title, body: opts.body, input: true, value: opts.value,
+                   placeholder: opts.placeholder, okText: opts.okText || 'Save' });
 }
 
 /* ---------- version + update ---------- */
@@ -1082,11 +855,9 @@ async function checkUpdate() {
 
 async function runUpdate() {
   if (!updateInfo || !updateInfo.newer) return;
-  const ok = confirm(
-    'Update Server Studio from ' + updateInfo.current + ' to ' + updateInfo.latest + '?\n\n' +
-    'This runs in a terminal window:\n  npm install -g server-studio\n\n' +
-    'Your saved servers and folders are not touched. Restart Server Studio when it finishes.'
-  );
+  const ok = await ssConfirm('Update to ' + updateInfo.latest + '?',
+    'You are on ' + updateInfo.current + '. This runs npm install -g server-studio in a terminal window.\n\nYour saved servers and folders are not touched. Restart Server Studio when it finishes.',
+    { okText: 'Update' });
   if (!ok) return;
   const r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cwd: '', command: 'npm install -g server-studio' }) });
@@ -1253,7 +1024,7 @@ function openModal(id) {
   setTimeout(() => f_name.focus(), 50);
 }
 function closeModal() { document.getElementById('overlay').classList.remove('open'); }
-function saveServer() {
+async function saveServer() {
   const id = document.getElementById('editId').value;
   const data = {
     name: f_name.value.trim(), project: f_project.value.trim(), folder: f_folder.value || '',
@@ -1269,11 +1040,9 @@ function saveServer() {
     const taken = servers.find(x => x.id !== id && portOf(x) === wanted);
     if (taken) {
       const free = nextFreePort(id);
-      const useFree = confirm(
-        'Port ' + wanted + ' is already used by "' + (taken.name || 'another server') + '".\n\n' +
-        'Two projects on one port means whichever starts second fails.\n\n' +
-        'OK to use port ' + free + ' instead, or Cancel to keep ' + wanted + ' anyway.'
-      );
+      const useFree = await ssConfirm('Port ' + wanted + ' is already taken',
+        '"' + (taken.name || 'another server') + '" already uses it, and two projects on one port means whichever starts second fails.\n\nUse port ' + free + ' instead?',
+        { okText: 'Use ' + free });
       if (useFree) {
         const rx = new RegExp('\\b' + wanted + '\\b', 'g');
         data.url = String(data.url || '').replace(rx, String(free));
@@ -1288,9 +1057,12 @@ function saveServer() {
   persist(); closeModal(); render(); refreshStatus();
 }
 function editServer(id) { openModal(id); }
-function delServer(id) {
+async function delServer(id) {
   const s = servers.find(x => x.id === id);
-  if (confirm(`Delete "${s.name || 'this server'}"? This only removes it from the list.`)) {
+  const ok = await ssConfirm('Delete "' + (s.name || 'this server') + '"?',
+    'This only removes the card. Your project and its files are untouched.',
+    { okText: 'Delete', danger: true });
+  if (ok) {
     servers = servers.filter(x => x.id !== id); persist(); render();
   }
 }
@@ -1398,6 +1170,19 @@ async function sendAsk(e) {
 }
 
 /* ---------- wire up ---------- */
+document.getElementById('dlgOk').onclick = () => {
+  const input = document.getElementById('dlgInput');
+  closeDlg(input.style.display === 'none' ? true : input.value);
+};
+document.getElementById('dlgCancel').onclick = () => closeDlg(null);
+document.getElementById('dlgOverlay').onclick = e => { if (e.target.id === 'dlgOverlay') closeDlg(null); };
+document.getElementById('dlgInput').onkeydown = e => {
+  if (e.key === 'Enter') { e.preventDefault(); closeDlg(e.target.value); }
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('dlgOverlay').classList.contains('open')) closeDlg(null);
+});
+
 document.getElementById('addBtn').onclick = () => openModal();
 document.getElementById('saveBtn').onclick = saveServer;
 document.getElementById('browseBtn').onclick = browseFolder;
