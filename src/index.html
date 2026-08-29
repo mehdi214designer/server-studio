@@ -37,6 +37,153 @@
     background-image: radial-gradient(900px 500px at 80% -10%, rgba(109,139,255,0.06), transparent 60%);
   }
   .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- shell: sidebar + main ---------- */
+  .shell { display: grid; grid-template-columns: 236px minmax(0,1fr); gap: 30px; align-items: start; }
+  .sidebar { position: sticky; top: 32px; display: flex; flex-direction: column; gap: 18px; height: calc(100vh - 64px); max-height: calc(100vh - 64px); }
+  .side-brand h1 { font-size: 19px; letter-spacing: -0.2px; display: flex; align-items: center; gap: 9px; }
+  .side-brand p { font-size: 12.5px; color: var(--text-faint); margin-top: 5px; }
+
+  .folders { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 0 1 auto; min-height: 0; margin: 0 -6px; padding: 0 6px; }
+  .folders::-webkit-scrollbar { width: 6px; }
+  .folders::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .f-item {
+    display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 9px;
+    font-size: 13.5px; color: var(--text-dim); cursor: pointer; border: 1px solid transparent;
+    transition: background .13s, color .13s; user-select: none;
+  }
+  .f-item:hover { background: var(--bg-soft); color: var(--text); }
+  .f-item.active { background: var(--accent-soft); color: var(--accent); border-color: rgba(109,139,255,.22); }
+  .f-item.drop { border-color: var(--accent); background: var(--accent-soft); }
+  .f-item svg { flex: none; opacity: .8; }
+  .f-item .f-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .f-item .n { font-size: 11.5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .f-item .f-edit { opacity: 0; border: 0; background: transparent; color: var(--text-faint); cursor: pointer; padding: 2px; border-radius: 5px; display: flex; }
+  .f-item:hover .f-edit { opacity: 1; }
+  .f-item .f-edit:hover { color: var(--text); background: var(--border-soft); }
+  .f-sep { height: 1px; background: var(--border-soft); margin: 8px 4px; }
+  .f-new {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; width: 100%;
+    background: transparent; border: 1px dashed var(--border); color: var(--text-faint);
+    font-size: 13px; cursor: pointer; font-family: inherit; transition: all .13s;
+  }
+  .f-new:hover { color: var(--text); border-color: var(--text-faint); }
+
+  /* ---------- ask box, docked bottom-left ---------- */
+  .ask { border: 1px solid var(--border); background: var(--bg-soft); border-radius: 12px; padding: 13px; position: relative; flex: none; }
+  .ask h4 { font-size: 12.5px; margin-bottom: 4px; letter-spacing: -0.1px; }
+  .ask p { font-size: 11.5px; color: var(--text-faint); line-height: 1.5; margin-bottom: 10px; }
+  .ask textarea, .ask input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 8px 9px; font: inherit; font-size: 12.5px; margin-bottom: 7px; resize: vertical;
+  }
+  .ask textarea { min-height: 58px; line-height: 1.5; font-family: inherit; }
+  .ask textarea:focus, .ask input:focus { outline: none; border-color: var(--accent); }
+  .ask button[type=submit] { width: 100%; justify-content: center; font-size: 12.5px; padding: 8px; }
+  .ask-x { position: absolute; top: 8px; right: 8px; border: 0; background: transparent; color: var(--text-faint); font-size: 17px; line-height: 1; cursor: pointer; padding: 2px 5px; border-radius: 6px; }
+  .ask-x:hover { color: var(--text); background: var(--border-soft); }
+  .ask-ok { font-size: 12px; color: var(--green); padding: 4px 0 2px; }
+
+  .help-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border-radius: 9px;
+    background: var(--bg-soft); border: 1px solid var(--border); color: var(--text-dim);
+    font-size: 12.5px; cursor: pointer; font-family: inherit; transition: all .13s; flex: none;
+  }
+  .help-btn:hover { color: var(--text); border-color: var(--text-faint); }
+
+  /* ---------- version pill / update affordance ---------- */
+  .ver {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
+    color: var(--text-faint); background: var(--bg-soft); border: 1px solid var(--border);
+    padding: 3px 8px; border-radius: 999px; border-radius: 999px;
+  }
+  .ver.has-update {
+    color: var(--green); border-color: rgba(62,207,142,.4); background: var(--green-soft);
+    cursor: pointer; animation: verPulse 2.4s ease-in-out 6;
+  }
+  .ver.has-update:hover { background: rgba(62,207,142,.24); }
+  .ver .dot-new { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex: none; }
+  .ver.checking { opacity: .55; }
+  @keyframes verPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(62,207,142,0); }
+    50%      { box-shadow: 0 0 0 4px rgba(62,207,142,.18); }
+  }
+  @media (prefers-reduced-motion: reduce) { .ver.has-update { animation: none; } }
+
+  /* ---------- creator badge, sidebar bottom ---------- */
+  .credit { flex: none; margin-top: auto; }
+  .credit a {
+    display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--bg-soft);
+    text-decoration: none; transition: border-color .15s, background .15s, transform .15s;
+  }
+  .credit a:hover { border-color: var(--accent); background: var(--accent-soft); transform: translateY(-1px); }
+  .credit .mark {
+    flex: none; width: 26px; height: 26px; border-radius: 8px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), #8ea3ff);
+    color: #0c0d10; font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
+  }
+  .credit .who { min-width: 0; line-height: 1.25; }
+  .credit .who b { display: block; font-size: 12.5px; font-weight: 600; color: var(--text);
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .credit .who span { display: block; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-faint); }
+  .credit .go { margin-left: auto; flex: none; color: var(--text-faint); opacity: 0; transform: translateX(-3px); transition: all .15s; }
+  .credit a:hover .go { opacity: 1; transform: none; color: var(--accent); }
+
+  /* ---------- move-to-folder menu ---------- */
+  .menu {
+    position: fixed; z-index: 60; min-width: 190px; max-height: 300px; overflow-y: auto;
+    background: var(--card); border: 1px solid var(--border); border-radius: 11px;
+    padding: 5px; box-shadow: var(--shadow);
+  }
+  .menu-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-faint); padding: 6px 9px 4px; }
+  .menu button {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    background: transparent; border: 0; color: var(--text-dim); font: inherit; font-size: 13px;
+    padding: 8px 9px; border-radius: 7px; cursor: pointer;
+  }
+  .menu button:hover { background: var(--bg-soft); color: var(--text); }
+  .menu button.on { color: var(--accent); }
+  .menu button .tick { margin-left: auto; opacity: 0; }
+  .menu button.on .tick { opacity: 1; }
+  .card.dragging { opacity: .45; }
+
+  /* ---------- little extras ---------- */
+  .conflict {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--amber);
+    background: rgba(245,179,67,.12); border: 1px solid rgba(245,179,67,.25);
+    border-radius: 6px; padding: 2px 7px; margin-left: 8px; vertical-align: middle;
+    font-family: inherit; cursor: pointer; transition: background .14s, border-color .14s;
+  }
+  .conflict:hover { background: rgba(245,179,67,.22); border-color: rgba(245,179,67,.5); }
+
+  @media (max-width: 900px) {
+    /* The sidebar dissolves so its children can be ordered around the server grid.
+       Nobody opening this on a phone wants an email form before their servers. */
+    .shell { grid-template-columns: 1fr; gap: 18px; }
+    .sidebar { display: contents; }
+    .side-brand { order: 1; }
+    .folders   { order: 2; }
+    main.main  { order: 3; min-width: 0; }   /* element-scoped: .main alone also hits .btn-run.main */
+    .ask       { order: 4; }
+    .help-btn  { order: 5; }
+    .credit    { order: 6; margin-top: 4px; }
+    .f-new     { order: 7; }
+
+    .folders {
+      flex-direction: row; overflow-x: auto; flex-wrap: nowrap; min-width: 0;
+      gap: 6px; padding-bottom: 2px; scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .folders::-webkit-scrollbar { display: none; }
+    .f-item { flex: none; }
+    .f-item .f-edit { display: none; }
+    .f-sep { display: none; }
+    .f-new { max-width: 220px; }
+  }
+
   header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; }
   .title h1 { font-size: 24px; font-weight: 650; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
   .title .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px var(--green-soft); }
@@ -55,6 +202,9 @@
   .btn-primary:hover { background: #7e98ff; border-color: #7e98ff; }
   .btn-run { background: var(--green); border-color: var(--green); color: #05140d; font-weight: 650; }
   .btn-run:hover { background: #4fdc9b; border-color: #4fdc9b; }
+  .btn-stop { background: var(--red); border-color: var(--red); color: #fff; font-weight: 650; }
+  .btn-stop:hover { background: #ff6a7d; border-color: #ff6a7d; }
+  .btn-busy { background: var(--bg-soft); border-color: var(--border); color: var(--text-faint); font-weight: 600; cursor: default; }
   .btn-ghost { background: transparent; }
 
   .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 22px; flex-wrap: wrap; }
@@ -79,7 +229,7 @@
   .chip .n { opacity: 0.65; font-weight: 600; }
   .chip.active .n { opacity: 0.8; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap: 16px; }
   .card {
     background: var(--card); border: 1px solid var(--border-soft); border-radius: var(--radius);
     padding: 18px; display: flex; flex-direction: column; gap: 13px; transition: border-color 0.15s, transform 0.15s; position: relative;
@@ -142,15 +292,85 @@
   .toast .tdot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
   .toast.err .tdot { background: var(--red); }
 
-  @media (max-width: 560px) { body { padding: 20px 14px 60px; } .row2 { grid-template-columns: 1fr; } }
+  .subscribe { margin-top: 28px; display: none; align-items: center; gap: 18px; flex-wrap: wrap;
+    padding: 16px 18px; border: 1px solid var(--border-soft); border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--bg-soft), var(--card)); }
+  .subscribe.show { display: flex; }
+  .subscribe .sub-copy { flex: 1; min-width: 220px; }
+  .subscribe .sub-copy b { font-size: 14px; font-weight: 620; letter-spacing: -0.01em; }
+  .subscribe .sub-copy span { display: block; color: var(--text-dim); font-size: 12.5px; margin-top: 3px; }
+  .subscribe form { display: flex; gap: 8px; flex-wrap: wrap; }
+  .subscribe input { font-family: inherit; font-size: 13.5px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px; min-width: 210px; outline: none; transition: border-color 0.15s; }
+  .subscribe input:focus { border-color: var(--accent); }
+  .subscribe .sub-x { background: transparent; border: none; color: var(--text-faint); cursor: pointer;
+    font-size: 20px; padding: 2px 6px; line-height: 1; align-self: flex-start; }
+  .subscribe .sub-x:hover { color: var(--text-dim); }
+
+  @media (max-width: 560px) {
+    body { padding: 20px 14px 60px; }
+    .row2 { grid-template-columns: 1fr; }
+    header { flex-direction: column; align-items: stretch; gap: 12px; }
+    .head-actions { flex-wrap: wrap; }
+    .head-actions .btn-ghost, .head-actions .btn-primary { flex: 1 1 auto; justify-content: center; }
+    .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+    .search { width: 100%; }
+    .stats { justify-content: flex-start; gap: 14px; }
+    .card-actions { flex-wrap: wrap; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
+ <div class="shell">
+
+  <!-- ---------------- sidebar ---------------- -->
+  <aside class="sidebar">
+    <div class="side-brand">
+      <h1><span class="dot"></span> Server Studio</h1>
+      <p>All your local servers in one place.</p>
+      <span class="ver checking" id="verPill" title="Version">v…</span>
+    </div>
+
+    <nav class="folders" id="folders"></nav>
+
+    <button class="f-new" id="newFolder">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New folder
+    </button>
+
+    <!-- ask box, docked at the bottom. Collapses to the help button. -->
+    <div class="ask" id="ask">
+      <button class="ask-x" id="askDismiss" title="Hide" aria-label="Hide">&times;</button>
+      <h4>Ideas, problems, or just say hi</h4>
+      <p>Tell me what you wish existed. I build small tools, and requests here often turn into the next one. I will also email you when something new ships.</p>
+      <form id="askForm">
+        <textarea id="askMsg" placeholder="What would make your workflow easier?" maxlength="2000"></textarea>
+        <input type="email" id="askEmail" placeholder="you@email.com" autocomplete="email" required>
+        <button type="submit" class="btn-primary" id="askBtn">Send</button>
+      </form>
+    </div>
+
+    <button class="help-btn" id="helpBtn" style="display:none;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Request a feature
+    </button>
+
+    <div class="credit">
+      <a href="https://www.mahdicreates.com" target="_blank" rel="noopener noreferrer" title="Made by Md Mahdi Hasan - mahdicreates.com">
+        <span class="mark">MH</span>
+        <span class="who"><span>Creator</span><b>Md Mahdi Hasan</b></span>
+        <svg class="go" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ---------------- main ---------------- -->
+  <main class="main">
   <header>
     <div class="title">
-      <h1><span class="dot"></span> Server Studio</h1>
-      <p>All your local servers in one place. One click to run.</p>
+      <h2 id="viewTitle" style="font-size:20px;letter-spacing:-0.2px;">All servers</h2>
+      <p id="viewSub">One click to run.</p>
     </div>
     <div class="head-actions">
       <button class="btn-ghost" id="checkAll" title="Re-check which servers are online">
@@ -178,7 +398,6 @@
     </div>
   </div>
 
-  <div class="filters" id="filters"></div>
   <div class="grid" id="grid"></div>
 
   <div class="empty" id="empty" style="display:none;">
@@ -186,6 +405,9 @@
     <p>Add your first local server so you always know which command runs which project.</p>
     <button class="btn-primary" onclick="openModal()">+ Add your first server</button>
   </div>
+
+  </main>
+ </div>
 </div>
 
 <div class="overlay" id="overlay">
@@ -203,9 +425,8 @@
         <input type="text" id="f_project" placeholder="e.g. Client redesign">
       </div>
       <div class="field">
-        <label>Category</label>
-        <input type="text" id="f_category" list="catList" placeholder="WordPress, Web app...">
-        <datalist id="catList"></datalist>
+        <label>Folder</label>
+        <select id="f_folder"></select>
       </div>
     </div>
     <div class="field">
@@ -247,7 +468,8 @@
 
 <script>
 let servers = [];
-let activeCat = 'all';
+let folders = [];          // [{id, name}]
+let activeFolder = 'all';  // 'all' | 'none' | folder id
 
 /* ---------- api ---------- */
 async function api(path, opts) {
@@ -266,6 +488,37 @@ async function loadPlatform() {
     }
   } catch (e) { /* label just stays generic */ }
 }
+async function loadFolders() {
+  try { folders = await api('/api/folders'); } catch (e) { folders = []; }
+  if (!Array.isArray(folders)) folders = [];
+}
+let folderTimer = null;
+function persistFolders() {
+  clearTimeout(folderTimer);
+  folderTimer = setTimeout(function () {
+    fetch('/api/folders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(folders) });
+  }, 150);
+}
+
+// Folders replaced categories. Anyone upgrading keeps their grouping: each distinct
+// category becomes a folder and its servers move in. Runs once, then never again.
+function migrateCategories() {
+  if (folders.length) return false;
+  const names = [...new Set(servers.map(s => (s.category || '').trim()).filter(Boolean))];
+  if (!names.length) return false;
+  names.sort((a, b) => a.localeCompare(b));
+  folders = names.map(n => ({ id: 'f_' + Math.random().toString(36).slice(2, 9), name: n }));
+  const byName = {};
+  folders.forEach(f => { byName[f.name] = f.id; });
+  servers.forEach(s => {
+    const c = (s.category || '').trim();
+    if (c && byName[c] && !s.folder) s.folder = byName[c];
+  });
+  persistFolders();
+  persist();
+  return true;
+}
+
 async function loadServers() {
   try { servers = await api('/api/servers'); }
   catch (e) { servers = []; }
@@ -273,13 +526,18 @@ async function loadServers() {
 }
 let saveTimer = null;
 let pendingSaves = 0;
+let dirty = false;
 function persist() {
+  // Claim the change immediately. pendingSaves only rises once the debounce fires,
+  // so without this flag a sync tick landing inside that 150ms window refetches the
+  // old list and quietly undoes what the user just did.
+  dirty = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     const clean = servers.map(({ _status, ...rest }) => rest);
     pendingSaves++;
     fetch('/api/servers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(clean) })
-      .finally(() => { pendingSaves--; });
+      .finally(() => { pendingSaves--; dirty = false; });
   }, 150);
 }
 
@@ -288,7 +546,7 @@ function stripIds(arr) { return JSON.stringify(arr.map(({ _status, ...r }) => r)
 // Pull the latest list from disk so servers saved elsewhere (e.g. the save-server
 // skill) show up without a manual reload. Skips while editing or mid-save to avoid clobbering.
 async function syncList() {
-  if (pendingSaves > 0) return;
+  if (dirty || pendingSaves > 0) return;
   if (document.getElementById('overlay').classList.contains('open')) return;
   let remote;
   try { remote = await api('/api/servers'); } catch (e) { return; }
@@ -313,7 +571,11 @@ function normalizeUrl(raw) {
 }
 function portOf(s) {
   if (s.port) return s.port;
-  const m = String(s.url || '').match(/:(\d{2,5})\b/);
+  const raw = String(s.url || '').trim();
+  // The URL field accepts a bare port, so read that too. Without this a card saved as
+  // "5173" reported no port at all, which skipped the clash badge and the collision check.
+  if (/^\d{2,5}$/.test(raw)) return Number(raw);
+  const m = raw.match(/:(\d{2,5})\b/);
   return m ? Number(m[1]) : null;
 }
 
@@ -327,21 +589,180 @@ function toast(msg, isErr) {
 }
 
 /* ---------- categories / filters ---------- */
-function categories() {
-  return [...new Set(servers.map(s => (s.category || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+function folderName(id) { const f = folders.find(x => x.id === id); return f ? f.name : ''; }
+function countIn(id) {
+  if (id === 'all') return servers.length;
+  if (id === 'none') return servers.filter(s => !s.folder || !folders.some(f => f.id === s.folder)).length;
+  return servers.filter(s => s.folder === id).length;
 }
-function renderFilters() {
-  const cats = categories();
-  const box = document.getElementById('filters');
-  if (cats.length === 0) { box.innerHTML = ''; return; }
-  const count = c => servers.filter(s => (s.category || '').trim() === c).length;
-  const chip = (key, label, n) =>
-    `<button class="chip ${activeCat === key ? 'active' : ''}" onclick="setCat('${key.replace(/'/g, "\\'")}')">${esc(label)} <span class="n">${n}</span></button>`;
-  box.innerHTML = chip('all', 'All', servers.length) + cats.map(c => chip(c, c, count(c))).join('');
+
+const ICON_ALL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>';
+const ICON_FOLDER = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+const ICON_PEN = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+
+function renderFolders() {
+  const el = document.getElementById('folders');
+  if (!el) return;
+  const row = (key, icon, label, editable) =>
+    '<div class="f-item ' + (activeFolder === key ? 'active' : '') + '" data-folder="' + key + '" ' +
+    (key !== 'all' && key !== 'none' ? 'data-drop="1"' : '') + '>' +
+      icon +
+      '<span class="f-name">' + esc(label) + '</span>' +
+      '<span class="n">' + countIn(key) + '</span>' +
+      (editable ? '<button class="f-edit" data-edit="' + key + '" title="Rename or delete">' + ICON_PEN + '</button>' : '') +
+    '</div>';
+
+  let html = row('all', ICON_ALL, 'All servers', false);
+  if (folders.length) html += '<div class="f-sep"></div>';
+  folders.forEach(f => { html += row(f.id, ICON_FOLDER, f.name, true); });
+  if (countIn('none') && folders.length) html += row('none', ICON_FOLDER, 'Unfiled', false);
+  el.innerHTML = html;
+
+  const title = document.getElementById('viewTitle');
+  const sub = document.getElementById('viewSub');
+  if (title) title.textContent = activeFolder === 'all' ? 'All servers'
+    : activeFolder === 'none' ? 'Unfiled' : (folderName(activeFolder) || 'All servers');
+  if (sub) sub.textContent = countIn(activeFolder) + (countIn(activeFolder) === 1 ? ' server' : ' servers');
 }
-function setCat(c) { activeCat = c; render(); }
-function refreshCatList() {
-  document.getElementById('catList').innerHTML = categories().map(c => `<option value="${esc(c)}">`).join('');
+
+function setFolder(k) { activeFolder = k; render(); }
+
+function newFolder() {
+  const name = (prompt('Folder name') || '').trim();
+  if (!name) return;
+  if (folders.some(f => f.name.toLowerCase() === name.toLowerCase())) { toast('A folder with that name already exists.', true); return; }
+  const f = { id: 'f_' + Math.random().toString(36).slice(2, 9), name: name };
+  folders.push(f);
+  persistFolders(); activeFolder = f.id; render();
+  toast('Folder "' + name + '" created');
+}
+
+function editFolder(id) {
+  const f = folders.find(x => x.id === id);
+  if (!f) return;
+  const name = prompt('Rename folder, or clear the box to delete it', f.name);
+  if (name === null) return;
+  const trimmed = name.trim();
+  if (!trimmed) {
+    const n = countIn(id);
+    const msg = n ? 'Delete "' + f.name + '"? Its ' + n + ' server' + (n === 1 ? '' : 's') + ' will move to Unfiled, nothing is deleted.'
+                  : 'Delete "' + f.name + '"?';
+    if (!confirm(msg)) return;
+    folders = folders.filter(x => x.id !== id);
+    servers.forEach(s => { if (s.folder === id) delete s.folder; });
+    if (activeFolder === id) activeFolder = 'all';
+    persistFolders(); persist(); render();
+    toast('Folder deleted, servers kept');
+    return;
+  }
+  f.name = trimmed;
+  persistFolders(); render();
+}
+
+function closeMenu() { const m = document.getElementById('moveMenu'); if (m) m.remove(); }
+
+function openMoveMenu(e, id) {
+  e.stopPropagation();
+  closeMenu();
+  const s = servers.find(x => x.id === id);
+  if (!s) return;
+  const m = document.createElement('div');
+  m.className = 'menu'; m.id = 'moveMenu';
+  const tick = '<svg class="tick" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg>';
+  const row = (fid, label) =>
+    '<button data-move="' + esc(fid) + '" class="' + ((s.folder || '') === fid ? 'on' : '') + '">' +
+      ICON_FOLDER + '<span>' + esc(label) + '</span>' + tick + '</button>';
+  m.innerHTML = '<div class="menu-label">Move to</div>' +
+    row('', 'No folder') +
+    folders.map(f => row(f.id, f.name)).join('') +
+    (folders.length ? '' : '<div class="menu-label" style="text-transform:none;letter-spacing:0">Create a folder first</div>');
+  document.body.appendChild(m);
+
+  // keep it on screen
+  const r = e.currentTarget.getBoundingClientRect();
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(r.left, window.innerWidth - mw - 8)) + 'px';
+  m.style.top = (r.bottom + mh + 8 > window.innerHeight ? Math.max(8, r.top - mh - 6) : r.bottom + 6) + 'px';
+
+  m.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-move]');
+    if (!b) return;
+    moveToFolder(id, b.getAttribute('data-move'));
+    closeMenu();
+  });
+}
+document.addEventListener('click', closeMenu);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+
+// Same rule the skill uses: assigned ports start at 3001 and climb to the first free one.
+function nextFreePort(excludeId) {
+  const used = new Set(servers.filter(s => s.id !== excludeId).map(s => portOf(s)).filter(Boolean));
+  let p = 3001;
+  while (used.has(p)) p++;
+  return p;
+}
+
+async function fixPortClash(e, id) {
+  e.stopPropagation();
+  const s = servers.find(x => x.id === id);
+  if (!s) return;
+  const oldPort = portOf(s);
+  if (!oldPort) return;
+  const newPort = nextFreePort(id);
+  const others = servers.filter(x => x.id !== id && portOf(x) === oldPort).map(x => x.name || 'untitled');
+
+  // Ask the project what it can actually do before promising anything.
+  let plan = { ok: false, reason: 'could not read the project' };
+  if (s.cwd) {
+    try {
+      plan = await api('/api/setport', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cwd: s.cwd, port: newPort, apply: false }) });
+    } catch (err) {}
+  } else plan = { ok: false, reason: 'this server has no project folder set' };
+
+  const msg =
+    'Move "' + (s.name || 'this server') + '" from port ' + oldPort + ' to ' + newPort + '?\n\n' +
+    'Port ' + oldPort + ' is also used by: ' + others.join(', ') + '\n\n' +
+    (plan.ok
+      ? 'The project will be updated too:\n  "' + plan.key + '": ' + JSON.stringify(plan.before) +
+        '\n           becomes ' + JSON.stringify(plan.after) + '\n\nA backup of package.json is kept.'
+      : 'The project config cannot be updated automatically (' + plan.reason + ').\n' +
+        'Only the card changes, so set port ' + newPort + ' in the project yourself.');
+  if (!confirm(msg)) return;
+
+  if (plan.ok) {
+    let applied = { ok: false };
+    try {
+      applied = await api('/api/setport', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cwd: s.cwd, port: newPort, apply: true }) });
+    } catch (err) {}
+    if (!applied.ok) { toast('Could not update the project: ' + (applied.reason || 'error'), true); return; }
+  }
+
+  const rx = new RegExp('\\b' + oldPort + '\\b', 'g');
+  s.url = String(s.url || '').replace(rx, String(newPort));
+  if (s.command) s.command = s.command.replace(rx, String(newPort));
+  s._status = 'unknown';
+  persist(); render(); refreshStatus();
+  toast(plan.ok ? 'Moved to port ' + newPort + ', project updated.'
+                : 'Card moved to ' + newPort + '. Set it in the project too.');
+}
+
+function moveToFolder(serverId, folderId) {
+  const s = servers.find(x => x.id === serverId);
+  if (!s) return;
+  if (folderId) s.folder = folderId; else delete s.folder;
+  persist(); render();
+  toast(folderId ? 'Moved to ' + folderName(folderId) : 'Moved out of the folder');
+}
+
+function refreshFolderList() {
+  const sel = document.getElementById('f_folder');
+  if (!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">No folder</option>' +
+    folders.map(f => '<option value="' + esc(f.id) + '">' + esc(f.name) + '</option>').join('');
+  sel.value = keep;
 }
 
 /* ---------- render ---------- */
@@ -350,15 +771,26 @@ function render() {
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
 
-  if (activeCat !== 'all' && !categories().includes(activeCat)) activeCat = 'all';
-  renderFilters();
-  refreshCatList();
+  if (activeFolder !== 'all' && activeFolder !== 'none' && !folders.some(f => f.id === activeFolder)) activeFolder = 'all';
+  renderFolders();
+  refreshFolderList();
 
+  const inFolder = s => {
+    if (activeFolder === 'all') return true;
+    if (activeFolder === 'none') return !s.folder || !folders.some(f => f.id === s.folder);
+    return s.folder === activeFolder;
+  };
   let list = servers.filter(s =>
-    (activeCat === 'all' || (s.category || '').trim() === activeCat) &&
-    (!q || [s.name, s.project, s.url, s.tag, s.category, s.command, s.note].join(' ').toLowerCase().includes(q))
+    inFolder(s) &&
+    (!q || [s.name, s.project, s.url, s.tag, folderName(s.folder), s.command, s.note].join(' ').toLowerCase().includes(q))
   );
   list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+  // A port used by more than one project breaks the promise that a saved card keeps
+  // working, so say so on both cards rather than letting it fail silently later.
+  const portUse = {};
+  servers.forEach(s => { const p = portOf(s); if (p) (portUse[p] = portUse[p] || []).push(s.id); });
+  const clash = id => { const p = portOf(servers.find(x => x.id === id) || {}); return p && portUse[p] && portUse[p].length > 1; };
 
   document.getElementById('countTotal').textContent = servers.length;
   document.getElementById('countUp').textContent = servers.filter(s => s._status === 'up').length;
@@ -372,14 +804,14 @@ function render() {
     const st = s._status || 'unknown';
     const port = portOf(s);
     return `
-    <div class="card ${s.pinned ? 'pinned' : ''}">
+    <div class="card ${s.pinned ? 'pinned' : ''}" draggable="true" data-id="${s.id}">
       <div class="card-top">
         <div class="card-name">
           <button class="pin-star ${s.pinned ? 'on' : ''}" onclick="togglePin('${s.id}')" title="Pin to top">${s.pinned ? '★' : '☆'}</button>
           ${esc(s.name) || 'Untitled'}
         </div>
         <div class="badges">
-          ${s.category ? `<span class="cat">${esc(s.category)}</span>` : ''}
+          ${s.folder && folderName(s.folder) ? `<span class="cat">${esc(folderName(s.folder))}</span>` : ''}
           ${s.tag ? `<span class="tag">${esc(s.tag)}</span>` : ''}
         </div>
       </div>
@@ -388,7 +820,7 @@ function render() {
         ${esc(s.project)}</div>` : ''}
       ${url ? `<div class="url-row">
         <span class="status ${st === 'unknown' ? '' : st}" title="${st}"></span>
-        <span class="url-text">${esc(url.replace(/^https?:\/\//, ''))}</span>
+        <span class="url-text">${esc(url.replace(/^https?:\/\//, ''))}</span>${clash(s.id) ? `<button class="conflict" onclick="fixPortClash(event, '${s.id}')" title="Another project already uses this port. Click to move this one to a free port.">port clash &middot; fix</button>` : ''}
         <button style="padding:2px 4px;border:none;background:none;color:var(--text-faint)" onclick="copyUrl('${url}', this)" title="Copy URL">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         </button>
@@ -396,18 +828,28 @@ function render() {
       ${s.command ? `<div class="cmd-line">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
         <span>${esc(s.command)}</span></div>` : ''}
+      ${s.command && !s.cwd ? `<div class="note" style="color:var(--amber)">No project folder set, so Run has nowhere to go. Add one in Edit.</div>` : ''}
       ${s.note ? `<div class="note">${esc(s.note)}</div>` : ''}
       <div class="card-actions">
-        ${s.command
-          ? `<button class="btn-run main" onclick="runServer('${s.id}')" title="Run">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20 6 4"/></svg> Run</button>`
+        ${s.command || port
+          ? (st === 'checking'
+              ? `<button class="btn btn-busy main" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg> Working</button>`
+              : st === 'up' && port
+                ? `<button class="btn btn-stop main" onclick="stopServer('${s.id}')" title="Stop whatever is on port ${port}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> Stop</button>`
+                : s.command
+                  ? `<button class="btn btn-run main" onclick="runServer('${s.id}')" title="Run">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20 6 4"/></svg> Run</button>`
+                  : '')
           : ''}
         ${url
           ? `<a class="btn ${s.command ? '' : 'btn-primary main'}" href="${url}" target="_blank" rel="noopener" title="Open in browser">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${s.command ? '' : ' Open'}</a>`
           : ''}
-        ${port ? `<button class="icon-btn" onclick="stopServer('${s.id}')" title="Stop server on port ${port}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>` : ''}
+        <button class="icon-btn" onclick="openMoveMenu(event, '${s.id}')" title="Move to folder">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
         <button class="icon-btn" onclick="editServer('${s.id}')" title="Edit">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
         <button class="icon-btn" onclick="delServer('${s.id}')" title="Delete">
@@ -421,14 +863,26 @@ function render() {
 async function runServer(id) {
   const s = servers.find(x => x.id === id);
   if (!s || !s.command) return;
+  // With no folder the command runs in the home directory, where it either fails with
+  // something confusing like "Missing script: dev" or, worse, does something unintended.
+  if (!s.cwd) {
+    toast('No project folder set for "' + (s.name || 'this server') + '". Set it first.', true);
+    openModal(id);
+    setTimeout(() => { const el = document.getElementById('f_cwd'); if (el) el.focus(); }, 120);
+    return;
+  }
   const r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cwd: s.cwd || '', command: s.command }) });
-  if (r.ok) { toast('Running "' + (s.name || 'server') + '" in ' + TERM_NAME); setTimeout(() => refreshStatus(), 3500); }
-  else toast('Could not run: ' + (r.error || 'error'), true);
+  if (r.ok) {
+    toast('Running "' + (s.name || 'server') + '" in ' + TERM_NAME);
+    if (portOf(s)) { s._status = 'checking'; render(); }
+    setTimeout(() => refreshStatus(), 3500);
+  } else toast('Could not run: ' + (r.error || 'error'), true);
 }
 async function stopServer(id) {
   const s = servers.find(x => x.id === id);
   const port = portOf(s);
   if (!port) return;
+  s._status = 'checking'; render();
   await api('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ port }) });
   toast('Stopped whatever was on port ' + port);
   setTimeout(() => refreshStatus(), 700);
@@ -447,7 +901,7 @@ function openModal(id) {
   document.getElementById('modalTitle').textContent = id ? 'Edit server' : 'Add server';
   document.getElementById('editId').value = id || '';
   const s = servers.find(x => x.id === id) || {};
-  f_name.value = s.name || ''; f_project.value = s.project || ''; f_category.value = s.category || '';
+  f_name.value = s.name || ''; f_project.value = s.project || ''; f_folder.value = s.folder || '';
   f_cwd.value = s.cwd || ''; f_command.value = s.command || ''; f_url.value = s.url || '';
   f_tag.value = s.tag || ''; f_note.value = s.note || '';
   setTimeout(() => f_name.focus(), 50);
@@ -456,11 +910,33 @@ function closeModal() { document.getElementById('overlay').classList.remove('ope
 function saveServer() {
   const id = document.getElementById('editId').value;
   const data = {
-    name: f_name.value.trim(), project: f_project.value.trim(), category: f_category.value.trim(),
+    name: f_name.value.trim(), project: f_project.value.trim(), folder: f_folder.value || '',
     cwd: f_cwd.value.trim(), command: f_command.value.trim(), url: f_url.value.trim(),
     tag: f_tag.value.trim(), note: f_note.value.trim(),
   };
   if (!data.name && !data.url && !data.command) { toast('Add at least a name, URL or command.', true); return; }
+
+  // The whole point of this app is one permanent port per project, so catch a collision
+  // here rather than letting two cards fight over a port and fail at run time.
+  const wanted = portOf(data);
+  if (wanted) {
+    const taken = servers.find(x => x.id !== id && portOf(x) === wanted);
+    if (taken) {
+      const free = nextFreePort(id);
+      const useFree = confirm(
+        'Port ' + wanted + ' is already used by "' + (taken.name || 'another server') + '".\n\n' +
+        'Two projects on one port means whichever starts second fails.\n\n' +
+        'OK to use port ' + free + ' instead, or Cancel to keep ' + wanted + ' anyway.'
+      );
+      if (useFree) {
+        const rx = new RegExp('\\b' + wanted + '\\b', 'g');
+        data.url = String(data.url || '').replace(rx, String(free));
+        if (data.command) data.command = data.command.replace(rx, String(free));
+        toast('Using port ' + free + '. Set it in the project config too.');
+      }
+    }
+  }
+
   if (id) { Object.assign(servers.find(x => x.id === id), data); }
   else { servers.push({ id: uid(), pinned: false, ...data }); }
   persist(); closeModal(); render(); refreshStatus();
@@ -520,6 +996,403 @@ async function migrateFromLocalStorage() {
   } catch (e) {}
 }
 
+/* ---------- email signup ---------- */
+/* ---------- ask box: requests + email, docked bottom-left ---------- */
+function showAsk(open) {
+  const box = document.getElementById('ask');
+  const btn = document.getElementById('helpBtn');
+  if (!box || !btn) return;
+  box.style.display = open ? '' : 'none';
+  btn.style.display = open ? 'none' : '';
+}
+
+async function initAsk() {
+  try {
+    const r = await api('/api/subscribe');   // GET -> { enabled }
+    if (!r || !r.enabled) { showAsk(false); document.getElementById('helpBtn').style.display = 'none'; return; }
+    const state = localStorage.getItem('ss_ask');
+    showAsk(state !== 'hide');
+  } catch (e) {
+    showAsk(false);
+    const b = document.getElementById('helpBtn'); if (b) b.style.display = 'none';
+  }
+}
+
+function dismissAsk() {
+  localStorage.setItem('ss_ask', 'hide');
+  showAsk(false);
+  // Tell them where it went, once, so it does not feel like it vanished.
+  toast('Moved to "Request a feature" in the sidebar. Open it any time.');
+}
+
+async function sendAsk(e) {
+  e.preventDefault();
+  const email = document.getElementById('askEmail').value.trim();
+  const message = document.getElementById('askMsg').value.trim();
+  const btn = document.getElementById('askBtn');
+  if (!email) return;
+  btn.disabled = true; btn.textContent = 'Sending...';
+  let ok = false;
+  try {
+    const r = await api('/api/subscribe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, message: message }),
+    });
+    ok = !!(r && r.ok);
+  } catch (err) { ok = false; }
+  btn.disabled = false; btn.textContent = 'Send';
+  if (ok) {
+    document.getElementById('ask').innerHTML =
+      '<div class="ask-ok">Thanks. ' + (message ? 'I read every one of these.' : 'You are on the list.') + '</div>';
+    localStorage.setItem('ss_ask', 'done');
+    setTimeout(function () { showAsk(false); }, 2600);
+  } else {
+    toast('Could not send that. Try again in a moment.', true);
+  }
+}
+
+/* ---------- version + update ---------- */
+let updateInfo = null;
+
+async function checkUpdate() {
+  const pill = document.getElementById('verPill');
+  if (!pill) return;
+  let r = null;
+  try { r = await api('/api/update'); } catch (e) {}
+  if (!r || !r.current) { pill.style.display = 'none'; return; }
+  updateInfo = r;
+  pill.classList.remove('checking');
+
+  if (r.newer) {
+    pill.className = 'ver has-update';
+    pill.innerHTML = '<span class="dot-new"></span>v' + esc(r.current) + ' &rarr; ' + esc(r.latest);
+    pill.title = 'Version ' + r.latest + ' is available. Click to update.';
+    pill.onclick = runUpdate;
+  } else {
+    pill.className = 'ver';
+    pill.textContent = 'v' + r.current;
+    pill.title = r.latest ? 'Up to date' : 'Version ' + r.current + ' (could not reach npm)';
+    pill.onclick = null;
+  }
+}
+
+async function runUpdate() {
+  if (!updateInfo || !updateInfo.newer) return;
+  const ok = confirm(
+    'Update Server Studio from ' + updateInfo.current + ' to ' + updateInfo.latest + '?\n\n' +
+    'This runs in a terminal window:\n  npm install -g server-studio\n\n' +
+    'Your saved servers and folders are not touched. Restart Server Studio when it finishes.'
+  );
+  if (!ok) return;
+  const r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cwd: '', command: 'npm install -g server-studio' }) });
+  if (r && r.ok) toast('Updating in ' + TERM_NAME + '. Restart Server Studio when it finishes.');
+  else toast('Could not start the update. Run: npm install -g server-studio', true);
+}
+
+function moveToFolder(serverId, folderId) {
+  const s = servers.find(x => x.id === serverId);
+  if (!s) return;
+  if (folderId) s.folder = folderId; else delete s.folder;
+  persist(); render();
+  toast(folderId ? 'Moved to ' + folderName(folderId) : 'Moved out of the folder');
+}
+
+function refreshFolderList() {
+  const sel = document.getElementById('f_folder');
+  if (!sel) return;
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">No folder</option>' +
+    folders.map(f => '<option value="' + esc(f.id) + '">' + esc(f.name) + '</option>').join('');
+  sel.value = keep;
+}
+
+/* ---------- render ---------- */
+function render() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+
+  if (activeFolder !== 'all' && activeFolder !== 'none' && !folders.some(f => f.id === activeFolder)) activeFolder = 'all';
+  renderFolders();
+  refreshFolderList();
+
+  const inFolder = s => {
+    if (activeFolder === 'all') return true;
+    if (activeFolder === 'none') return !s.folder || !folders.some(f => f.id === s.folder);
+    return s.folder === activeFolder;
+  };
+  let list = servers.filter(s =>
+    inFolder(s) &&
+    (!q || [s.name, s.project, s.url, s.tag, folderName(s.folder), s.command, s.note].join(' ').toLowerCase().includes(q))
+  );
+  list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+
+  // A port used by more than one project breaks the promise that a saved card keeps
+  // working, so say so on both cards rather than letting it fail silently later.
+  const portUse = {};
+  servers.forEach(s => { const p = portOf(s); if (p) (portUse[p] = portUse[p] || []).push(s.id); });
+  const clash = id => { const p = portOf(servers.find(x => x.id === id) || {}); return p && portUse[p] && portUse[p].length > 1; };
+
+  document.getElementById('countTotal').textContent = servers.length;
+  document.getElementById('countUp').textContent = servers.filter(s => s._status === 'up').length;
+
+  if (servers.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  if (list.length === 0) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1;">No servers match.</div>'; return; }
+
+  grid.innerHTML = list.map(s => {
+    const url = normalizeUrl(s.url);
+    const st = s._status || 'unknown';
+    const port = portOf(s);
+    return `
+    <div class="card ${s.pinned ? 'pinned' : ''}" draggable="true" data-id="${s.id}">
+      <div class="card-top">
+        <div class="card-name">
+          <button class="pin-star ${s.pinned ? 'on' : ''}" onclick="togglePin('${s.id}')" title="Pin to top">${s.pinned ? '★' : '☆'}</button>
+          ${esc(s.name) || 'Untitled'}
+        </div>
+        <div class="badges">
+          ${s.folder && folderName(s.folder) ? `<span class="cat">${esc(folderName(s.folder))}</span>` : ''}
+          ${s.tag ? `<span class="tag">${esc(s.tag)}</span>` : ''}
+        </div>
+      </div>
+      ${s.project ? `<div class="project">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        ${esc(s.project)}</div>` : ''}
+      ${url ? `<div class="url-row">
+        <span class="status ${st === 'unknown' ? '' : st}" title="${st}"></span>
+        <span class="url-text">${esc(url.replace(/^https?:\/\//, ''))}</span>${clash(s.id) ? `<button class="conflict" onclick="fixPortClash(event, '${s.id}')" title="Another project already uses this port. Click to move this one to a free port.">port clash &middot; fix</button>` : ''}
+        <button style="padding:2px 4px;border:none;background:none;color:var(--text-faint)" onclick="copyUrl('${url}', this)" title="Copy URL">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>` : ''}
+      ${s.command ? `<div class="cmd-line">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <span>${esc(s.command)}</span></div>` : ''}
+      ${s.command && !s.cwd ? `<div class="note" style="color:var(--amber)">No project folder set, so Run has nowhere to go. Add one in Edit.</div>` : ''}
+      ${s.note ? `<div class="note">${esc(s.note)}</div>` : ''}
+      <div class="card-actions">
+        ${s.command || port
+          ? (st === 'checking'
+              ? `<button class="btn btn-busy main" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.2-8.5"/></svg> Working</button>`
+              : st === 'up' && port
+                ? `<button class="btn btn-stop main" onclick="stopServer('${s.id}')" title="Stop whatever is on port ${port}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> Stop</button>`
+                : s.command
+                  ? `<button class="btn btn-run main" onclick="runServer('${s.id}')" title="Run">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 4 20 12 6 20 6 4"/></svg> Run</button>`
+                  : '')
+          : ''}
+        ${url
+          ? `<a class="btn ${s.command ? '' : 'btn-primary main'}" href="${url}" target="_blank" rel="noopener" title="Open in browser">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${s.command ? '' : ' Open'}</a>`
+          : ''}
+        <button class="icon-btn" onclick="openMoveMenu(event, '${s.id}')" title="Move to folder">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="editServer('${s.id}')" title="Edit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg></button>
+        <button class="icon-btn" onclick="delServer('${s.id}')" title="Delete">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- actions ---------- */
+async function runServer(id) {
+  const s = servers.find(x => x.id === id);
+  if (!s || !s.command) return;
+  // With no folder the command runs in the home directory, where it either fails with
+  // something confusing like "Missing script: dev" or, worse, does something unintended.
+  if (!s.cwd) {
+    toast('No project folder set for "' + (s.name || 'this server') + '". Set it first.', true);
+    openModal(id);
+    setTimeout(() => { const el = document.getElementById('f_cwd'); if (el) el.focus(); }, 120);
+    return;
+  }
+  const r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cwd: s.cwd || '', command: s.command }) });
+  if (r.ok) {
+    toast('Running "' + (s.name || 'server') + '" in ' + TERM_NAME);
+    if (portOf(s)) { s._status = 'checking'; render(); }
+    setTimeout(() => refreshStatus(), 3500);
+  } else toast('Could not run: ' + (r.error || 'error'), true);
+}
+async function stopServer(id) {
+  const s = servers.find(x => x.id === id);
+  const port = portOf(s);
+  if (!port) return;
+  s._status = 'checking'; render();
+  await api('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ port }) });
+  toast('Stopped whatever was on port ' + port);
+  setTimeout(() => refreshStatus(), 700);
+}
+function copyUrl(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    const old = btn.innerHTML;
+    btn.innerHTML = '<span style="color:var(--green);font-size:11px">copied</span>';
+    setTimeout(() => btn.innerHTML = old, 1200);
+  });
+}
+
+/* ---------- crud ---------- */
+function openModal(id) {
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('modalTitle').textContent = id ? 'Edit server' : 'Add server';
+  document.getElementById('editId').value = id || '';
+  const s = servers.find(x => x.id === id) || {};
+  f_name.value = s.name || ''; f_project.value = s.project || ''; f_folder.value = s.folder || '';
+  f_cwd.value = s.cwd || ''; f_command.value = s.command || ''; f_url.value = s.url || '';
+  f_tag.value = s.tag || ''; f_note.value = s.note || '';
+  setTimeout(() => f_name.focus(), 50);
+}
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function saveServer() {
+  const id = document.getElementById('editId').value;
+  const data = {
+    name: f_name.value.trim(), project: f_project.value.trim(), folder: f_folder.value || '',
+    cwd: f_cwd.value.trim(), command: f_command.value.trim(), url: f_url.value.trim(),
+    tag: f_tag.value.trim(), note: f_note.value.trim(),
+  };
+  if (!data.name && !data.url && !data.command) { toast('Add at least a name, URL or command.', true); return; }
+
+  // The whole point of this app is one permanent port per project, so catch a collision
+  // here rather than letting two cards fight over a port and fail at run time.
+  const wanted = portOf(data);
+  if (wanted) {
+    const taken = servers.find(x => x.id !== id && portOf(x) === wanted);
+    if (taken) {
+      const free = nextFreePort(id);
+      const useFree = confirm(
+        'Port ' + wanted + ' is already used by "' + (taken.name || 'another server') + '".\n\n' +
+        'Two projects on one port means whichever starts second fails.\n\n' +
+        'OK to use port ' + free + ' instead, or Cancel to keep ' + wanted + ' anyway.'
+      );
+      if (useFree) {
+        const rx = new RegExp('\\b' + wanted + '\\b', 'g');
+        data.url = String(data.url || '').replace(rx, String(free));
+        if (data.command) data.command = data.command.replace(rx, String(free));
+        toast('Using port ' + free + '. Set it in the project config too.');
+      }
+    }
+  }
+
+  if (id) { Object.assign(servers.find(x => x.id === id), data); }
+  else { servers.push({ id: uid(), pinned: false, ...data }); }
+  persist(); closeModal(); render(); refreshStatus();
+}
+function editServer(id) { openModal(id); }
+function delServer(id) {
+  const s = servers.find(x => x.id === id);
+  if (confirm(`Delete "${s.name || 'this server'}"? This only removes it from the list.`)) {
+    servers = servers.filter(x => x.id !== id); persist(); render();
+  }
+}
+function togglePin(id) { const s = servers.find(x => x.id === id); s.pinned = !s.pinned; persist(); render(); }
+
+async function browseFolder() {
+  const r = await api('/api/pickfolder', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  if (r.path) f_cwd.value = r.path;
+}
+
+/* ---------- status ---------- */
+async function refreshStatus() {
+  servers.forEach(s => { if (portOf(s)) s._status = 'checking'; });
+  render();
+  try {
+    const map = await api('/api/status');
+    servers.forEach(s => { s._status = map[s.id] ? 'up' : (portOf(s) ? 'down' : 'unknown'); });
+  } catch (e) {}
+  render();
+}
+
+/* ---------- export / import ---------- */
+function exportData() {
+  const clean = servers.map(({ _status, ...rest }) => rest);
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'server-studio-backup.json'; a.click();
+}
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw 0;
+      data.forEach(d => { if (!d.id) d.id = uid(); });
+      servers = data; persist(); render(); refreshStatus();
+      toast('Imported ' + data.length + ' servers');
+    } catch { toast('That file is not a valid backup.', true); }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- one-time migration from old browser version ---------- */
+async function migrateFromLocalStorage() {
+  if (servers.length) return;
+  try {
+    const old = JSON.parse(localStorage.getItem('local_server_dashboard_v1') || '[]');
+    if (Array.isArray(old) && old.length) { servers = old; persist(); toast('Imported your previous list'); }
+  } catch (e) {}
+}
+
+/* ---------- email signup ---------- */
+/* ---------- ask box: requests + email, docked bottom-left ---------- */
+function showAsk(open) {
+  const box = document.getElementById('ask');
+  const btn = document.getElementById('helpBtn');
+  if (!box || !btn) return;
+  box.style.display = open ? '' : 'none';
+  btn.style.display = open ? 'none' : '';
+}
+
+async function initAsk() {
+  try {
+    const r = await api('/api/subscribe');   // GET -> { enabled }
+    if (!r || !r.enabled) { showAsk(false); document.getElementById('helpBtn').style.display = 'none'; return; }
+    const state = localStorage.getItem('ss_ask');
+    showAsk(state !== 'hide');
+  } catch (e) {
+    showAsk(false);
+    const b = document.getElementById('helpBtn'); if (b) b.style.display = 'none';
+  }
+}
+
+function dismissAsk() {
+  localStorage.setItem('ss_ask', 'hide');
+  showAsk(false);
+  // Tell them where it went, once, so it does not feel like it vanished.
+  toast('Moved to "Request a feature" in the sidebar. Open it any time.');
+}
+
+async function sendAsk(e) {
+  e.preventDefault();
+  const email = document.getElementById('askEmail').value.trim();
+  const message = document.getElementById('askMsg').value.trim();
+  const btn = document.getElementById('askBtn');
+  if (!email) return;
+  btn.disabled = true; btn.textContent = 'Sending...';
+  let ok = false;
+  try {
+    const r = await api('/api/subscribe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, message: message }),
+    });
+    ok = !!(r && r.ok);
+  } catch (err) { ok = false; }
+  btn.disabled = false; btn.textContent = 'Send';
+  if (ok) {
+    document.getElementById('ask').innerHTML =
+      '<div class="ask-ok">Thanks. ' + (message ? 'I read every one of these.' : 'You are on the list.') + '</div>';
+    localStorage.setItem('ss_ask', 'done');
+    setTimeout(function () { showAsk(false); }, 2600);
+  } else {
+    toast('Could not send that. Try again in a moment.', true);
+  }
+}
+
 /* ---------- wire up ---------- */
 document.getElementById('addBtn').onclick = () => openModal();
 document.getElementById('saveBtn').onclick = saveServer;
@@ -538,9 +1411,53 @@ document.addEventListener('keydown', e => {
 (async function init() {
   await loadPlatform();
   await loadServers();
+  await loadFolders();
   await migrateFromLocalStorage();
+  migrateCategories();
   render();
   refreshStatus();
+  initAsk();
+  checkUpdate();
+
+  document.getElementById('folders').addEventListener('click', function (e) {
+    const edit = e.target.closest('[data-edit]');
+    if (edit) { e.stopPropagation(); editFolder(edit.getAttribute('data-edit')); return; }
+    const item = e.target.closest('[data-folder]');
+    if (item) setFolder(item.getAttribute('data-folder'));
+  });
+  document.getElementById('newFolder').onclick = newFolder;
+
+  // Drag a card onto a folder in the sidebar. Touch users get the move menu instead.
+  let dragId = null;
+  document.getElementById('grid').addEventListener('dragstart', e => {
+    const card = e.target.closest('.card[data-id]');
+    if (!card) return;
+    dragId = card.getAttribute('data-id');
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', dragId); } catch (err) {}
+  });
+  document.getElementById('grid').addEventListener('dragend', e => {
+    const card = e.target.closest('.card'); if (card) card.classList.remove('dragging');
+    dragId = null;
+  });
+  const nav = document.getElementById('folders');
+  nav.addEventListener('dragover', e => {
+    const t = e.target.closest('[data-drop]'); if (!t || !dragId) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'move'; t.classList.add('drop');
+  });
+  nav.addEventListener('dragleave', e => {
+    const t = e.target.closest('[data-drop]'); if (t) t.classList.remove('drop');
+  });
+  nav.addEventListener('drop', e => {
+    const t = e.target.closest('[data-drop]'); if (!t || !dragId) return;
+    e.preventDefault(); t.classList.remove('drop');
+    moveToFolder(dragId, t.getAttribute('data-folder'));
+    dragId = null;
+  });
+  document.getElementById('askDismiss').onclick = dismissAsk;
+  document.getElementById('helpBtn').onclick = function () { localStorage.removeItem('ss_ask'); showAsk(true); };
+  document.getElementById('askForm').onsubmit = sendAsk;
   setInterval(refreshStatus, 12000);
   setInterval(syncList, 4000);
 })();

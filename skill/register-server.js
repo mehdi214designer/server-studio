@@ -6,7 +6,7 @@
 // No npm deps. Usage:
 //   node register-server.js --name "Portfolio Site" --project "Client redesign" \
 //        --cwd "/Users/you/Sites/portfolio" --command "npm run dev" --url "localhost:3001" \
-//        --category "WordPress" --tag "Vite" --note "admin: ninja/ninja"
+//        --folder "WordPress" --tag "Vite" --note "admin: ninja/ninja"
 //
 //   # let it pick a fresh, never-used port for a NEW project:
 //   node register-server.js --name "New Site" --cwd "/path" --command "npm run dev" --assign
@@ -29,6 +29,7 @@ const DATA_DIR = (function () {
   return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'server-studio');
 })();
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
+const FOLDERS_FILE = path.join(DATA_DIR, 'folders.json');
 const BASE_PORT = 3001; // assigned ports start here and go up
 
 // ---- parse --flag "value" args ----
@@ -50,7 +51,7 @@ function portFromUrl(url) {
 const entry = {
   name: args.name || '',
   project: args.project || '',
-  category: args.category || '',
+  folder: resolveFolder(args.folder || args.category),
   cwd: args.cwd || '',
   command: args.command || '',
   url: typeof args.url === 'string' ? args.url : '',
@@ -70,6 +71,24 @@ try { data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) || []; } catch (e) {
 if (!Array.isArray(data)) data = [];
 
 function uid() { return 's_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36); }
+
+// The app groups by folder id. Take a folder NAME on the command line and resolve it,
+// creating the folder if it does not exist yet, so a registered server lands in the
+// right place instead of sitting unfiled.
+function resolveFolder(name) {
+  const wanted = String(name || '').trim();
+  if (!wanted) return '';
+  let folders = [];
+  try { folders = JSON.parse(fs.readFileSync(FOLDERS_FILE, 'utf8')) || []; } catch (e) { folders = []; }
+  if (!Array.isArray(folders)) folders = [];
+  const hit = folders.find(f => String(f.name || '').toLowerCase() === wanted.toLowerCase());
+  if (hit) return hit.id;
+  const f = { id: 'f_' + Math.random().toString(36).slice(2, 9), name: wanted };
+  folders.push(f);
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(FOLDERS_FILE, JSON.stringify(folders, null, 2)); }
+  catch (e) { return ''; }
+  return f.id;
+}
 const norm = s => String(s || '').trim().toLowerCase();
 function usedPorts(excludeId) {
   return new Set(data.filter(s => s.id !== excludeId).map(s => portFromUrl(s.url)).filter(Boolean));

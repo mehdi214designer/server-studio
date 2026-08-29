@@ -1,0 +1,12 @@
+name = "server-studio-analytics"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Fill database_id in after `wrangler d1 create server-studio-analytics`.
+[[d1_databases]]
+binding = "DB"
+database_name = "server-studio-analytics"
+database_id = "PASTE_DATABASE_ID_HERE"
+
+# STATS_TOKEN is a secret, not set here. Add it with:
+#   wrangler secret put STATS_TOKEN

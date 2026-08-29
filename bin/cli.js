@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const telemetry = require('../src/telemetry');
 
 const ROOT = path.join(__dirname, '..');
 const APP_NAME = 'Server Studio.app';
@@ -109,6 +110,8 @@ function install() {
     console.log('\nUsing Claude Cowork? Install the plugin by opening this file:');
     console.log('  ' + pluginFile);
   }
+
+  telemetry.ping('install'); // counts a real install (never fires on --dry-run: it returns above)
 }
 
 /* ---------- uninstall ---------- */

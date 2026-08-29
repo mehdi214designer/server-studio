@@ -9,11 +9,16 @@ const os = require('os');
 const net = require('net');
 
 const plat = require('./platform');
+const setport = require('./setport');
+const telemetry = require('./telemetry');
 
 const PORT = process.env.PORT || 4587;
 const RES = __dirname;
 const DATA_DIR = plat.dataDir();
 const DATA_FILE = path.join(DATA_DIR, 'data.json');
+// Folders are stored separately. data.json stays a plain array so the published
+// register-server.js, which reads and writes that array, keeps working untouched.
+const FOLDERS_FILE = path.join(DATA_DIR, 'folders.json');
 
 /* ---------- storage ---------- */
 function ensureStore() {
@@ -26,6 +31,13 @@ function readData() {
 }
 function writeData(d) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2));
+}
+function readFolders() {
+  try { const f = JSON.parse(fs.readFileSync(FOLDERS_FILE, 'utf8')); return Array.isArray(f) ? f : []; }
+  catch (e) { return []; }
+}
+function writeFolders(f) {
+  fs.writeFileSync(FOLDERS_FILE, JSON.stringify(f, null, 2));
 }
 
 /* ---------- helpers ---------- */
@@ -72,6 +84,36 @@ function checkPort(port) {
 function portFromUrl(url) {
   const m = String(url || '').match(/:(\d{2,5})\b/);
   return m ? Number(m[1]) : null;
+}
+
+/* ---------- version check ---------- */
+function appVersion() {
+  try { return require('../package.json').version || '0.0.0'; } catch (e) { return '0.0.0'; }
+}
+function isNewer(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+function latestVersion() {
+  return new Promise((resolve, reject) => {
+    const req = require('https').get({
+      host: 'registry.npmjs.org',
+      path: '/server-studio/latest',
+      headers: { 'User-Agent': 'server-studio' },
+      timeout: 2500,
+    }, r => {
+      if (r.statusCode !== 200) { r.resume(); return resolve(null); }
+      let d = '';
+      r.on('data', c => { d += c; if (d.length > 2e5) r.destroy(); });
+      r.on('end', () => { try { resolve(JSON.parse(d).version || null); } catch (e) { resolve(null); } });
+    });
+    req.on('error', () => resolve(null));
+    req.on('timeout', () => { req.destroy(); resolve(null); });
+  });
 }
 
 /* ---------- routes ---------- */
@@ -152,6 +194,62 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
+  // Optional email signup. The browser posts here (same-origin), and we forward the
+  // user's chosen email to the remote counter. Inert if no analytics URL is set.
+  if (req.method === 'POST' && url === '/api/subscribe') {
+    const b = await body(req);
+    if (!b) return send(res, 415, { error: 'expected application/json' });
+    const email = String(b.email || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 254) {
+      return send(res, 400, { error: 'invalid email' });
+    }
+    // The message is optional. It is what turns this from a mailing list into a
+    // place to ask for things, so it is passed through rather than dropped.
+    const message = String(b.message || '').trim().slice(0, 2000);
+    if (!telemetry.subscribeEnabled) return send(res, 200, { ok: false, disabled: true });
+    const r = await telemetry.subscribe(email, message);
+    return send(res, r ? 200 : 502, { ok: r });
+  }
+
+  if (req.method === 'GET' && url === '/api/subscribe') {
+    // Tied to the signup endpoint, not the counter. The box should work even for
+    // someone who has turned telemetry off entirely.
+    return send(res, 200, { enabled: telemetry.subscribeEnabled });
+  }
+
+  // Version check against the public npm registry. No auth, no dependency, and it
+  // fails quietly so a blocked network just means no banner.
+  if (req.method === 'GET' && url === '/api/update') {
+    const current = appVersion();
+    return latestVersion().then(latest => {
+      send(res, 200, { current, latest, newer: !!(latest && isNewer(latest, current)) });
+    }).catch(() => send(res, 200, { current, latest: null, newer: false }));
+  }
+
+  if (req.method === 'GET' && url === '/api/folders') {
+    return send(res, 200, readFolders());
+  }
+
+  if (req.method === 'POST' && url === '/api/folders') {
+    const data = await body(req);
+    if (!Array.isArray(data)) return send(res, 400, { error: 'expected a JSON array' });
+    writeFolders(data);
+    return send(res, 200, { ok: true });
+  }
+
+  // Writes a fixed port into a project's package.json dev script. Pass apply:false to
+  // get the exact before/after first, so the user approves a real diff, not a promise.
+  if (req.method === 'POST' && url === '/api/setport') {
+    const b = await body(req);
+    if (!b) return send(res, 415, { error: 'expected application/json' });
+    const port = Number(b.port);
+    if (!port || port < 1 || port > 65535) return send(res, 400, { error: 'bad port' });
+    const r = b.apply ? setport.apply(String(b.cwd || ''), port) : setport.plan(String(b.cwd || ''), port);
+    return send(res, 200, { ok: !!r.ok, reason: r.reason || null, file: r.file || null,
+      key: r.key || null, before: r.before || null, after: r.after || null,
+      how: r.how || null, backup: r.backup || null });
+  }
+
   if (req.method === 'GET' && url === '/api/platform') {
     return send(res, 200, { platform: process.platform, terminalName: plat.terminalName(), pathExample: plat.pathExample() });
   }
@@ -174,6 +272,7 @@ const server = http.createServer(async (req, res) => {
 ensureStore();
 server.listen(PORT, '127.0.0.1', () => {
   console.log('Server Studio running on http://localhost:' + PORT);
+  telemetry.ping('start'); // one anonymous count per real launch (app or CLI)
   plat.openExternal('http://localhost:' + PORT + '/', () => {});
 });
 server.on('error', (e) => {

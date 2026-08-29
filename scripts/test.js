@@ -175,6 +175,87 @@ function req(opts, body) {
     check('plugin built', false, 'run npm run build:plugin first');
   }
 
+  // ---- writing a port into a project ----
+  const sp = require(path.join(ROOT, 'src', 'setport.js'));
+  check('rewrites a bare vite script', sp.rewriteScript('vite', 4000).next === 'vite --port 4000 --strictPort');
+  check('replaces an existing next port', sp.rewriteScript('next dev -p 3001', 4000).next === 'next dev -p 4000');
+  check('never doubles the flag', sp.rewriteScript('vite --port 5173 --strictPort', 4000).next === 'vite --port 4000 --strictPort');
+  check('refuses an unknown dev script', !sp.rewriteScript('node server.js', 4000).ok);
+  check('refuses a chained dev script', !sp.rewriteScript('vite && echo hi', 4000).ok);
+  (function () {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-sp-'));
+    const orig = '{\n    "name": "x",\n    "scripts": {\n        "dev": "vite"\n    },\n    "devDependencies": { "vite": "^5" }\n}\n';
+    fs.writeFileSync(path.join(d, 'package.json'), orig);
+    const planOnly = sp.plan(d, 4000);
+    check('plan does not write anything', planOnly.ok && fs.readFileSync(path.join(d, 'package.json'), 'utf8') === orig);
+    const r = sp.apply(d, 4000);
+    const after = fs.readFileSync(path.join(d, 'package.json'), 'utf8');
+    check('apply changes only the dev script',
+      after === orig.replace('"dev": "vite"', '"dev": "vite --port 4000 --strictPort"'));
+    check('apply keeps a backup', r.ok && fs.existsSync(r.backup));
+    check('result is still valid JSON', (() => { try { JSON.parse(after); return true; } catch (e) { return false; } })());
+    fs.rmSync(d, { recursive: true, force: true });
+  })();
+
+  // ---- version comparison behind the update pill ----
+  (function () {
+    const src = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
+    const m = src.match(/function isNewer\(a, b\) \{[\s\S]*?\n\}/);
+    const isNewer = eval('(' + m[0].replace('function isNewer', 'function') + ')');
+    check('1.2.0 is newer than 1.1.1', isNewer('1.2.0', '1.1.1'));
+    check('1.1.1 is not newer than itself', !isNewer('1.1.1', '1.1.1'));
+    check('1.1.1 is not newer than 1.2.0', !isNewer('1.1.1', '1.2.0'));
+    check('1.10.0 beats 1.9.0', isNewer('1.10.0', '1.9.0'));
+    check('2.0.0 beats 1.99.99', isNewer('2.0.0', '1.99.99'));
+  })();
+
+  // ---- telemetry ----
+  // It ships inert and must stay that way until an endpoint is configured, must honour
+  // both opt-outs, and must never keep a process alive on a network it cannot reach.
+  function loadTelemetry(extra) {
+    const keys = ['SERVER_STUDIO_ANALYTICS_URL','SERVER_STUDIO_NO_TELEMETRY','DO_NOT_TRACK','CI'];
+    const saved = {};
+    keys.forEach(k => { saved[k] = process.env[k]; delete process.env[k]; });
+    Object.assign(process.env, extra || {});
+    delete require.cache[require.resolve(path.join(ROOT, 'src', 'telemetry.js'))];
+    const m = require(path.join(ROOT, 'src', 'telemetry.js'));
+    keys.forEach(k => { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; });
+    return m;
+  }
+  check('telemetry is inert with no endpoint set', loadTelemetry({}).enabled === false);
+  check('telemetry enables only when an endpoint is set',
+    loadTelemetry({ SERVER_STUDIO_ANALYTICS_URL: 'https://example.invalid' }).enabled === true);
+  check('ping never throws when opted out', (() => {
+    try { loadTelemetry({ SERVER_STUDIO_ANALYTICS_URL: 'https://example.invalid', SERVER_STUDIO_NO_TELEMETRY: '1' }).ping('start'); return true; }
+    catch (e) { return false; }
+  })());
+  check('DO_NOT_TRACK is honoured', (() => {
+    try { loadTelemetry({ SERVER_STUDIO_ANALYTICS_URL: 'https://example.invalid', DO_NOT_TRACK: '1' }).ping('start'); return true; }
+    catch (e) { return false; }
+  })());
+  check('the request is unref\'d so it cannot hold a process open',
+    /req\.unref\(\)/.test(fs.readFileSync(path.join(ROOT, 'src', 'telemetry.js'), 'utf8')));
+  check('README documents telemetry and the opt-out', (() => {
+    const r = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+    return /^## Telemetry/m.test(r) && r.includes('SERVER_STUDIO_NO_TELEMETRY');
+  })());
+
+  // A blocked endpoint must not slow an install down.
+  const slowDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-slow-'));
+  const t0 = Date.now();
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], {
+      env: { ...process.env, SERVER_STUDIO_APP_DEST: path.join(slowDir, 'app'),
+        SERVER_STUDIO_SKILL_DEST: path.join(slowDir, 'skill'),
+        SERVER_STUDIO_DATA_DIR: path.join(slowDir, 'data'),
+        SERVER_STUDIO_ANALYTICS_URL: 'https://10.255.255.1' },
+      stdio: 'ignore',
+    });
+  } catch (e) {}
+  const blockedMs = Date.now() - t0;
+  fs.rmSync(slowDir, { recursive: true, force: true });
+  check('an unreachable endpoint does not delay install', blockedMs < 900, blockedMs + 'ms');
+
   // ---- platform shims ----
   // The real Windows and Linux behaviour cannot run here, so this only proves the
   // module picks the right command and data path for each OS.

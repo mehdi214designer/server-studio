@@ -49,7 +49,7 @@ line it prints and bake that port into the project config (see the golden rule a
 node "$HOME/.claude/skills/server-studio/register-server.js" \
   --name "Project Name" \
   --project "What it's for" \
-  --category "WordPress" \
+  --folder "WordPress" \
   --cwd "/absolute/path/to/project" \
   --command "npm run dev -- --port 3001 --strictPort" \
   --url "localhost:3001" \
@@ -61,7 +61,8 @@ node "$HOME/.claude/skills/server-studio/register-server.js" \
 Field guide:
 - `--name` — short label, e.g. "Portfolio Site"
 - `--project` — the project/task it belongs to
-- `--category` — broad bucket: WordPress, Web app, Storybook, Docs, etc. (used for the filter chips)
+- `--folder` — folder name to file it under, created if it does not exist yet (shown in the sidebar).
+  `--category` still works as an alias for older callers.
 - `--cwd` — absolute project folder; the run command executes here
 - `--command` — the exact command that starts the server (this is what the Run button runs)
 - `--url` — address or bare port (`3000` works, becomes `localhost:3000`)

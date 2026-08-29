@@ -214,6 +214,38 @@ The one step no machine can do is click a folder and confirm, so the path that r
 directory is exercised by hand rather than by CI. If Browse ever misbehaves on your system, type the
 path into the field instead. Nothing else depends on it.
 
+## Telemetry
+
+Server Studio sends one anonymous ping when it is installed and one when it launches, so
+installs can be counted. That is the whole of it.
+
+What is sent:
+
+| Field | Example | Why |
+|---|---|---|
+| A random id | `9f3c...` | Generated on your machine, stored in your data folder. Lets two launches from one machine count as one user |
+| Version | `1.2.0` | Which versions are still in use |
+| OS, arch | `darwin`, `arm64` | Which platforms to test on |
+| Node major | `22` | Which Node versions to keep supporting |
+
+What is never sent: your projects, folder paths, run commands, ports, notes, IP-derived
+location, or anything you typed into the app. There is no account and no profile.
+
+Turn it off completely, before or after installing:
+
+```bash
+export SERVER_STUDIO_NO_TELEMETRY=1
+```
+
+The standard `DO_NOT_TRACK=1` is honoured too, and nothing is sent under CI. The ping never
+blocks anything: it is fired without holding the process open, so a blocked or offline
+network costs you no time at all.
+
+The email box in the sidebar is separate and entirely opt-in. Nothing is sent from it unless
+you type an address and press send. When you do, your address and your message go to
+`mahdicreates.com`, which is the author's site, so he can reply and let you know when
+something new ships. Nothing else about you is attached.
+
 ## Your data
 
 Saved servers live in one file:
@@ -238,6 +270,19 @@ The app runs shell commands you saved, so it is deliberately locked to your own 
 
 Treat the run command on a card the way you would treat a line you are about to paste into your own
 terminal, because that is exactly what it becomes.
+
+## Forking this
+
+Two values point at the author's own services. If you fork this, change them or your users'
+signups arrive in someone else's inbox:
+
+| What | Where | Why |
+|---|---|---|
+| `SERVER_STUDIO_SUBSCRIBE_URL` | `src/telemetry.js` | Defaults to `mahdicreates.com`. Point it at your own endpoint, or set it empty to remove the sidebar box entirely |
+| `SERVER_STUDIO_ANALYTICS_URL` | unset by default | Install counting is inert unless you set this to your own collector |
+
+The creator credit in the sidebar is ordinary MIT-licensed source. You are free to change it,
+same as any other part.
 
 ## Development
 
