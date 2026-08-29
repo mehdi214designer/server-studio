@@ -85,7 +85,7 @@ Click **Add server**. Only the name matters, everything else can be filled in la
 |---|---|---|
 | Name | Card title, and what you search by | `Acme Dashboard` |
 | Project | A line of context for future you | `Client analytics UI` |
-| Category | Groups cards into filter tabs along the top | `Web app` |
+| Folder | Which folder it lives in, chosen from the sidebar list | `Web app` |
 | Project folder | Where the run command executes. **Browse** opens a folder picker | `~/Sites/acme` |
 | Run command | Exactly what you would type to start it | `npm run dev` |
 | URL / Address | Where it serves. A bare port works and becomes `localhost:PORT` | `5181` |
@@ -98,11 +98,14 @@ Each card has five controls:
 
 | Control | What happens |
 |---|---|
-| **Run** | Opens a terminal window, `cd`s into the folder, runs the command. Real terminal, so you see the output and can Ctrl-C it |
+| **Run / Stop** | One button that follows the live status. Green **Run** opens a terminal, `cd`s into the folder and runs the command. Once the port answers it turns into a red **Stop**, which kills whatever holds that port |
 | Open in browser | Opens the card's URL |
-| Stop | Kills whatever process is holding that port. Useful when something is stuck |
+| Move to folder | Pick a folder, or drag the card onto one in the sidebar |
 | Edit | Change any field |
 | Delete | Removes the card. Does not touch the project itself |
+
+If a card has no project folder set, **Run** refuses instead of running the command in your home
+directory, and says so on the card.
 
 The icon inside the URL box copies the address to your clipboard.
 
@@ -110,7 +113,19 @@ The dot next to the URL is live status: green means that port is currently accep
 red means nothing is there. It re-checks every 12 seconds, and **Refresh status** forces it.
 
 Click the star to pin a card to the top. The search box matches name, project, URL, command, tag,
-category and notes at once, so searching `wordpress` or `5181` or `vite` all find the right card.
+folder and notes at once, so searching `wordpress` or `5181` or `vite` all find the right card.
+
+### Folders
+
+The sidebar lists your folders. Click one to see only its servers, click **All servers** to go
+back. **New folder** creates one, and the pencil beside a folder renames it, or deletes it if you
+clear the name. Deleting a folder never deletes servers, they move to **Unfiled**.
+
+A server lives in one folder. Move it with the folder button on the card, by dragging the card onto
+a folder in the sidebar, or from the Folder field in Edit.
+
+Upgrading from an older version? Categories became folders automatically the first time you open
+the dashboard, and nothing is lost.
 
 ### The one permanent port rule
 
@@ -130,6 +145,14 @@ makes a saved entry go stale. Use the strict option so it fails loudly instead:
 | PHP | `php -S localhost:5181` |
 
 Then put that same port in both the run command and the URL on the card.
+
+**When two cards share a port**, both show a `port clash · fix` badge. Clicking it moves one of them
+to a free port. If the project's dev script is one it recognises, it also writes the new port into
+that project's `package.json`, showing you the exact before and after first and keeping a backup, so
+the card and the project stay in agreement. Anything it cannot parse safely is refused rather than
+guessed at, and only the card changes.
+
+Adding a server on a port another card already uses offers you a free one before saving.
 
 ### Let Claude do it for you
 
@@ -162,14 +185,23 @@ command with no AI involved, so any tool that can run a shell command can use it
 Cursor, Copilot, Windsurf, a Makefile, a shell alias, or you:
 
 ```bash
-server-studio add --name "Portfolio Site" --cwd "$PWD" --command "npm run dev" --assign
+server-studio add --name "Portfolio Site" --cwd "$PWD" --command "npm run dev" --folder "Client work" --assign
 ```
 
 `--assign` picks a port nothing else uses and prints `PORT <n>`, so a script can read that line and
-write the port into the project config. Re-running for the same project updates its fields and keeps
-its port locked, which is what makes this safe to call from a build step.
+write the port into the project config. `--folder` files it under that folder, creating the folder if
+it does not exist yet. Re-running for the same project updates its fields and keeps its port locked,
+which is what makes this safe to call from a build step.
 
 Run `server-studio add` with no arguments for the full list of fields.
+
+Run `server-studio add` with no arguments for the full list of fields.
+
+### Staying up to date
+
+The version sits under the app name in the sidebar. When a newer release is on npm it turns green
+and becomes a button: click it, confirm, and the update runs in a terminal window. Restart Server
+Studio when it finishes. Your saved servers and folders are never touched by an update.
 
 ### Backups
 
