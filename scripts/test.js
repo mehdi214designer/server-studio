@@ -240,21 +240,29 @@ function req(opts, body) {
     return /^## Telemetry/m.test(r) && r.includes('SERVER_STUDIO_NO_TELEMETRY');
   })());
 
-  // A blocked endpoint must not slow an install down.
-  const slowDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-slow-'));
-  const t0 = Date.now();
-  try {
-    execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], {
-      env: { ...process.env, SERVER_STUDIO_APP_DEST: path.join(slowDir, 'app'),
-        SERVER_STUDIO_SKILL_DEST: path.join(slowDir, 'skill'),
-        SERVER_STUDIO_DATA_DIR: path.join(slowDir, 'data'),
-        SERVER_STUDIO_ANALYTICS_URL: 'https://10.255.255.1' },
-      stdio: 'ignore',
-    });
-  } catch (e) {}
-  const blockedMs = Date.now() - t0;
-  fs.rmSync(slowDir, { recursive: true, force: true });
-  check('an unreachable endpoint does not delay install', blockedMs < 900, blockedMs + 'ms');
+  // A blocked endpoint must not slow an install down. Comparing the two runs matters
+  // more than an absolute number: a slow CI runner makes any fixed threshold flaky,
+  // while the gap between them is exactly what unref is supposed to remove.
+  function timedInstall(extraEnv) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-timed-'));
+    const t = Date.now();
+    try {
+      execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], {
+        env: { ...process.env, SERVER_STUDIO_APP_DEST: path.join(dir, 'app'),
+          SERVER_STUDIO_SKILL_DEST: path.join(dir, 'skill'),
+          SERVER_STUDIO_DATA_DIR: path.join(dir, 'data'), ...extraEnv },
+        stdio: 'ignore',
+      });
+    } catch (e) {}
+    const ms = Date.now() - t;
+    fs.rmSync(dir, { recursive: true, force: true });
+    return ms;
+  }
+  const baseline = timedInstall({ SERVER_STUDIO_ANALYTICS_URL: '' });
+  const blocked = timedInstall({ SERVER_STUDIO_ANALYTICS_URL: 'https://10.255.255.1' });
+  // Without unref the pending socket holds the process for the full 1500ms timeout.
+  check('an unreachable endpoint does not delay install',
+    blocked - baseline < 700, 'baseline ' + baseline + 'ms, blocked ' + blocked + 'ms, delta ' + (blocked - baseline) + 'ms');
 
   // ---- platform shims ----
   // The real Windows and Linux behaviour cannot run here, so this only proves the
