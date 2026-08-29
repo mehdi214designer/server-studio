@@ -336,6 +336,10 @@ SERVER_STUDIO_DATA_DIR=/tmp/ss-test node src/server.js
 code. On macOS the installer copies it into the app bundle, so the bundle never holds a stale
 version.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 MIT
