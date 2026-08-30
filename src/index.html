@@ -859,9 +859,12 @@ async function checkUpdate() {
     pending = null;
   }
   if (pending) {
+    // "restart" alone reads as reloading the page, which changes nothing: the old
+    // process is still serving it. Say which thing has to be restarted.
     pill.className = 'ver pending';
-    pill.textContent = 'restart to finish ' + pending;
-    pill.title = 'Version ' + pending + ' has been installed. Quit and reopen Server Studio to run it.';
+    pill.textContent = 'quit & reopen for ' + pending;
+    pill.title = pending + ' is installed. Quit Server Studio itself and open it again, ' +
+                 'reloading this page keeps the old version running.';
     pill.onclick = null;
     return;
   }
@@ -895,7 +898,7 @@ async function runUpdate() {
     // update. Continuing to show it after a successful update reads as a failure.
     try { localStorage.setItem('ss_updating_to', updateInfo.latest); } catch (e) {}
     checkUpdate();
-    toast('Updating in ' + TERM_NAME + '. Restart Server Studio when it finishes.');
+    toast('Updating in ' + TERM_NAME + '. Quit Server Studio and open it again when it finishes.');
   }
   else toast('Could not start the update. Run this yourself: npm install -g server-studio', true);
 }
