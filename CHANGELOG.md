@@ -2,7 +2,7 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
-## Unreleased
+## 1.2.4 — 2026-08-30
 
 - **Fixed:** on Windows, stopping a server could kill an unrelated process. The port was matched
   with `findstr :5173`, which also matches `0.0.0.0:51730`, so a longer port sharing the prefix was

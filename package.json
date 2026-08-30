@@ -1,6 +1,6 @@
 {
   "name": "server-studio",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "A tiny dashboard for your local dev servers. One click to run, stop and open them, with one permanent port per project.",
   "author": "Md Mahdi Hasan",
   "license": "MIT",
