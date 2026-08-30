@@ -195,13 +195,18 @@ which is what makes this safe to call from a build step.
 
 Run `server-studio add` with no arguments for the full list of fields.
 
-Run `server-studio add` with no arguments for the full list of fields.
-
 ### Staying up to date
 
 The version sits under the app name in the sidebar. When a newer release is on npm it turns green
 and becomes a button: click it, confirm, and the update runs in a terminal window. Restart Server
 Studio when it finishes. Your saved servers and folders are never touched by an update.
+
+Coming from **1.1.1 or older**? That badge did not exist yet, so there is no button in your copy.
+Update once by hand and every update after that is a click:
+
+```bash
+npm install -g server-studio
+```
 
 ### Backups
 
