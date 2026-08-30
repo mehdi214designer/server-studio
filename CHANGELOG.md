@@ -2,6 +2,14 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## Unreleased
+
+- **Fixed:** on Windows, stopping a server could kill an unrelated process. The port was matched
+  with `findstr :5173`, which also matches `0.0.0.0:51730`, so a longer port sharing the prefix was
+  caught too. Reported and patched by @anupamme in #1.
+- `killPort` no longer builds a shell command at all, on any platform. The port was already
+  sanitised by `Number()`, so this is hardening rather than a fix.
+
 ## 1.2.3 — 2026-08-30
 
 - The badge shown after an update now says **quit & reopen** rather than "restart to finish".

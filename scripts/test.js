@@ -307,6 +307,52 @@ function req(opts, body) {
   check('an unreachable endpoint does not delay install',
     blocked - baseline < 700, 'baseline ' + baseline + 'ms, blocked ' + blocked + 'ms, delta ' + (blocked - baseline) + 'ms');
 
+  // ---- killing a port must not catch a longer port that shares its prefix ----
+  // On Windows this used to shell out to `findstr :5173`, which also matched
+  // 0.0.0.0:51730, so stopping one server could kill an unrelated process.
+  // Runs the real killPort with a stubbed child_process, so it tests behaviour.
+  (function () {
+    const cp = require('child_process');
+    const realExecFile = cp.execFile;
+    const realPlatform = process.platform;
+    const NETSTAT = [
+      '  TCP    0.0.0.0:5173           0.0.0.0:0              LISTENING       1234',
+      '  TCP    0.0.0.0:51730          0.0.0.0:0              LISTENING       9999',
+      '  TCP    0.0.0.0:15173          0.0.0.0:0              LISTENING       7777',
+      '  TCP    127.0.0.1:5173         127.0.0.1:61000        ESTABLISHED     4321',
+    ].join('\r\n');
+
+    let killedWith = null;
+    cp.execFile = function (cmd, args, cb) {
+      if (cmd === 'netstat') return cb(null, NETSTAT, '');
+      if (cmd === 'taskkill') { killedWith = args.slice(); return cb(null, '', ''); }
+      return cb(null, '', '');
+    };
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    delete require.cache[require.resolve(path.join(ROOT, 'src', 'platform.js'))];
+    const winPlat = require(path.join(ROOT, 'src', 'platform.js'));
+
+    winPlat.killPort(5173, () => {});
+
+    Object.defineProperty(process, 'platform', { value: realPlatform, configurable: true });
+    cp.execFile = realExecFile;
+    delete require.cache[require.resolve(path.join(ROOT, 'src', 'platform.js'))];
+
+    const pids = (killedWith || []).filter(a => /^\d+$/.test(a));
+    check('kills the process on the exact port', pids.includes('1234'), JSON.stringify(killedWith));
+    check('spares a longer port sharing the prefix', !pids.includes('9999'), '51730 was killed too');
+    check('spares a port ending in the same digits', !pids.includes('7777'), '15173 was killed too');
+    check('ignores rows that are not listening', !pids.includes('4321'));
+    check('kills exactly one process here', pids.length === 1, JSON.stringify(pids));
+  })();
+
+  check('killPort builds no shell command string', (() => {
+    const src = fs.readFileSync(path.join(ROOT, 'src', 'platform.js'), 'utf8');
+    const fn = src.slice(src.indexOf('function killPort'), src.indexOf('\n}', src.indexOf('function killPort')));
+    // exec() runs a shell, execFile() does not. Only the latter belongs here.
+    return !/[^a-zA-Z]exec\(/.test(fn);
+  })());
+
   // ---- platform shims ----
   // The real Windows and Linux behaviour cannot run here, so this only proves the
   // module picks the right command and data path for each OS.
