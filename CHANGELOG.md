@@ -2,7 +2,7 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
-## Unreleased
+## 1.2.3 — 2026-08-30
 
 - The badge shown after an update now says **quit & reopen** rather than "restart to finish".
   Reloading the page kept the old process serving it, so the old wording sent people to do the
