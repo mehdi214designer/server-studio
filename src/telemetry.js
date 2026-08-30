@@ -101,12 +101,14 @@ function post(pathname, obj, timeout, keepAlive) {
       // timeout. A ping that would not have arrived is not worth a second of anyone's
       // install. Subscribe passes keepAlive because a person is waiting on the answer.
       //
-      // The socket has to be unref'd as well as the request. On Node 18 unref'ing the
-      // request before a socket exists does not propagate, and the process sat there
-      // for seconds on a blocked network.
+      // It has to be the socket, on every Node version. http.ClientRequest has no
+      // unref() of its own -- the socket is the only handle holding the event loop
+      // open -- and it does not exist yet when request() returns, so this waits for
+      // the 'socket' event rather than trying to unref up front. There was once a
+      // typeof-guarded unref on the request object beside it that never ran, because
+      // that method has never existed; the guard just swallowed it silently.
       if (!keepAlive) {
         req.on('socket', sock => { if (sock && typeof sock.unref === 'function') sock.unref(); });
-        if (typeof req.unref === 'function') req.unref();
       }
       req.end(payload);
     } catch (e) { resolve({ ok: false }); }

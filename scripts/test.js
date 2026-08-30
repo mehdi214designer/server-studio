@@ -274,10 +274,11 @@ function req(opts, body) {
   })());
   (function () {
     const t = fs.readFileSync(path.join(ROOT, 'src', 'telemetry.js'), 'utf8');
-    check('the request is unref\'d so it cannot hold a process open', /req\.unref\(\)/.test(t));
-    // Node 18 does not propagate an early req.unref() to the socket, so the socket
-    // must be unref'd too or a blocked network stalls the process for seconds.
-    check('the socket is unref\'d as well, which Node 18 needs', /sock\.unref\(\)/.test(t));
+    // The socket is what holds the loop open, on every Node version. There used to be
+    // a check here for req.unref() too, asserting on a line that never ran:
+    // http.ClientRequest has no unref(), so the typeof guard always skipped it.
+    check('the ping unrefs its socket so it cannot hold a process open', /sock\.unref\(\)/.test(t));
+    check('no dead req.unref() creeps back in', !/req\.unref\(\)/.test(t));
   })();
   check('README documents telemetry and the opt-out', (() => {
     const r = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
