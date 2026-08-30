@@ -97,7 +97,8 @@ Notable changes to Server Studio. Dates are release dates.
 ### Sidebar
 - The version sits under the app name. When a newer release exists it turns green and becomes a
   one-click update.
-- A request box: send a message and an email address, both optional to use and easy to dismiss.
+- A request box: write a message and leave your email address. The message is optional, the
+  address is not, since it is the only way to reply. Easy to dismiss.
   Dismissing it collapses it to a **Request a feature** button.
 - A creator credit pinned to the bottom.
 
