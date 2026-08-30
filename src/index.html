@@ -113,6 +113,7 @@
   .ver.has-update:hover { background: rgba(62,207,142,.24); }
   .ver .dot-new { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex: none; }
   .ver.checking { opacity: .55; }
+  .ver.pending { color: var(--amber); border-color: rgba(245,179,67,.4); background: rgba(245,179,67,.12); padding: 3px 9px; margin-left: -10px; }
   @keyframes verPulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(62,207,142,0); }
     50%      { box-shadow: 0 0 0 4px rgba(62,207,142,.18); }
@@ -831,6 +832,15 @@ function ssPrompt(title, opts) {
 /* ---------- version + update ---------- */
 let updateInfo = null;
 
+function isNewerVersion(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+
 async function checkUpdate() {
   const pill = document.getElementById('verPill');
   if (!pill) return;
@@ -839,6 +849,22 @@ async function checkUpdate() {
   if (!r || !r.current) { pill.style.display = 'none'; return; }
   updateInfo = r;
   pill.classList.remove('checking');
+
+  // An update was kicked off from here and this process is still the old one.
+  let pending = null;
+  try { pending = localStorage.getItem('ss_updating_to'); } catch (e) {}
+  if (pending && !isNewerVersion(pending, r.current)) {
+    // Already running it, so the restart happened. Clear the flag.
+    try { localStorage.removeItem('ss_updating_to'); } catch (e) {}
+    pending = null;
+  }
+  if (pending) {
+    pill.className = 'ver pending';
+    pill.textContent = 'restart to finish ' + pending;
+    pill.title = 'Version ' + pending + ' has been installed. Quit and reopen Server Studio to run it.';
+    pill.onclick = null;
+    return;
+  }
 
   if (r.newer) {
     pill.className = 'ver has-update';
@@ -864,7 +890,13 @@ async function runUpdate() {
     r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cwd: '', command: 'npm install -g server-studio' }) });
   } catch (e) { /* server gone: fall through to the error toast rather than doing nothing */ }
-  if (r && r.ok) toast('Updating in ' + TERM_NAME + '. Restart Server Studio when it finishes.');
+  if (r && r.ok) {
+    // The running process keeps the old code until it restarts, so stop offering the
+    // update. Continuing to show it after a successful update reads as a failure.
+    try { localStorage.setItem('ss_updating_to', updateInfo.latest); } catch (e) {}
+    checkUpdate();
+    toast('Updating in ' + TERM_NAME + '. Restart Server Studio when it finishes.');
+  }
   else toast('Could not start the update. Run this yourself: npm install -g server-studio', true);
 }
 

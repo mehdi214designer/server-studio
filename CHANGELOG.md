@@ -2,6 +2,12 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## 1.2.2 — 2026-08-30
+
+- The version badge no longer keeps offering an update you have already installed. Once you start
+  one it reads **restart to finish**, because the running process keeps the old code until it is
+  reopened. It returns to a plain version once you restart.
+
 ## 1.2.1 — 2026-08-30
 
 - **Fixed:** an installed app reported its version as `0.0.0`, because the code looks for
