@@ -859,10 +859,13 @@ async function runUpdate() {
     'You are on ' + updateInfo.current + '. This runs npm install -g server-studio in a terminal window.\n\nYour saved servers and folders are not touched. Restart Server Studio when it finishes.',
     { okText: 'Update' });
   if (!ok) return;
-  const r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ cwd: '', command: 'npm install -g server-studio' }) });
+  let r = null;
+  try {
+    r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cwd: '', command: 'npm install -g server-studio' }) });
+  } catch (e) { /* server gone: fall through to the error toast rather than doing nothing */ }
   if (r && r.ok) toast('Updating in ' + TERM_NAME + '. Restart Server Studio when it finishes.');
-  else toast('Could not start the update. Run: npm install -g server-studio', true);
+  else toast('Could not start the update. Run this yourself: npm install -g server-studio', true);
 }
 
 function moveToFolder(serverId, folderId) {
@@ -988,8 +991,11 @@ async function runServer(id) {
     setTimeout(() => { const el = document.getElementById('f_cwd'); if (el) el.focus(); }, 120);
     return;
   }
-  const r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cwd: s.cwd || '', command: s.command }) });
-  if (r.ok) {
+  let r = null;
+  try {
+    r = await api('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cwd: s.cwd || '', command: s.command }) });
+  } catch (e) {}
+  if (r && r.ok) {
     toast('Running "' + (s.name || 'server') + '" in ' + TERM_NAME);
     if (portOf(s)) { s._status = 'checking'; render(); }
     setTimeout(() => refreshStatus(), 3500);
@@ -1000,8 +1006,10 @@ async function stopServer(id) {
   const port = portOf(s);
   if (!port) return;
   s._status = 'checking'; render();
-  await api('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ port }) });
-  toast('Stopped whatever was on port ' + port);
+  try {
+    await api('/api/stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ port }) });
+    toast('Stopped whatever was on port ' + port);
+  } catch (e) { toast('Could not stop it, the app is not responding.', true); }
   setTimeout(() => refreshStatus(), 700);
 }
 function copyUrl(url, btn) {

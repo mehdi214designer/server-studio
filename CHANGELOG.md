@@ -2,6 +2,16 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## 1.2.1 — 2026-08-30
+
+- **Fixed:** an installed app reported its version as `0.0.0`, because the code looks for
+  `package.json` one level up and the app bundle does not contain one. The badge showed `v0.0.0`,
+  the update prompt appeared permanently even straight after updating, and telemetry recorded every
+  install as version 0.0.0. The installer now stamps the version beside the code.
+- **Fixed:** if the local server was not responding, clicking **Update**, **Run** or **Stop** did
+  nothing at all. The failed request threw and was never caught, so there was no error either. Those
+  actions now say what went wrong.
+
 ## 1.2.0 — 2026-08-30
 
 ### Folders replace categories

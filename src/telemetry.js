@@ -28,7 +28,12 @@ function optedOut() {
 }
 
 function appVersion() {
-  try { return require('../package.json').version; } catch (e) { return '0.0.0'; }
+  // Running from a checkout, package.json is one level up. Inside the installed app
+  // bundle there is no package.json, so the installer stamps version.json beside the
+  // code. Try both before giving up.
+  try { return require('./version.json').version || '0.0.0'; } catch (e) {}
+  try { return require('../package.json').version || '0.0.0'; } catch (e) {}
+  return '0.0.0';
 }
 
 function dataDir() {

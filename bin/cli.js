@@ -69,6 +69,14 @@ function install() {
     // cpSync does not preserve the exec bit on the launcher.
     // src/ is the single source of truth, copied into the bundle at install time.
     fs.cpSync(SRC, path.join(APP_DEST, 'Contents', 'Resources'), { recursive: true });
+    // The bundle has no package.json, so stamp the version beside the code. Without this
+    // an installed app reports 0.0.0 and therefore thinks an update is always available.
+    try {
+      fs.writeFileSync(
+        path.join(APP_DEST, 'Contents', 'Resources', 'version.json'),
+        JSON.stringify({ version: require(path.join(ROOT, 'package.json')).version }) + '\n'
+      );
+    } catch (e) {}
     fs.chmodSync(path.join(APP_DEST, 'Contents', 'MacOS', 'ServerStudio'), 0o755);
   } else skip('app skipped (--no-app)');
 

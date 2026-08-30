@@ -209,6 +209,31 @@ function req(opts, body) {
     check('2.0.0 beats 1.99.99', isNewer('2.0.0', '1.99.99'));
   })();
 
+  // ---- version reporting from an installed bundle ----
+  // The bundle carries no package.json, so without a stamped version an installed app
+  // reports 0.0.0 and believes an update is permanently available.
+  (function () {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-ver-'));
+    execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], {
+      env: { ...process.env, SERVER_STUDIO_APP_DEST: path.join(d, 'app'),
+        SERVER_STUDIO_SKILL_DEST: path.join(d, 'skill'), SERVER_STUDIO_DATA_DIR: path.join(d, 'data') },
+      stdio: 'ignore',
+    });
+    const stamped = path.join(d, 'app', 'Contents', 'Resources', 'version.json');
+    check('install stamps a version into the bundle', fs.existsSync(stamped));
+    if (fs.existsSync(stamped)) {
+      const v = JSON.parse(fs.readFileSync(stamped, 'utf8')).version;
+      const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+      check('stamped version matches package.json', v === pkg, v + ' vs ' + pkg);
+    }
+    fs.rmSync(d, { recursive: true, force: true });
+  })();
+  check('update actions handle an unreachable server', (() => {
+    const h = fs.readFileSync(path.join(ROOT, 'src', 'index.html'), 'utf8');
+    const block = h.slice(h.indexOf('async function runUpdate'), h.indexOf('async function runUpdate') + 900);
+    return /try\s*\{/.test(block) && /catch/.test(block);
+  })());
+
   // ---- telemetry ----
   // It ships inert and must stay that way until an endpoint is configured, must honour
   // both opt-outs, and must never keep a process alive on a network it cannot reach.
