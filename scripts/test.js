@@ -220,12 +220,25 @@ function req(opts, body) {
       stdio: 'ignore',
     });
     const stamped = path.join(d, 'app', 'Contents', 'Resources', 'version.json');
-    check('install stamps a version into the bundle', fs.existsSync(stamped));
-    if (fs.existsSync(stamped)) {
-      const v = JSON.parse(fs.readFileSync(stamped, 'utf8')).version;
-      const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
-      check('stamped version matches package.json', v === pkg, v + ' vs ' + pkg);
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+    if (MAC) {
+      // Only macOS gets an app bundle, and only the bundle needs a stamped version,
+      // because it has no package.json of its own to read.
+      check('install stamps a version into the bundle', fs.existsSync(stamped));
+      if (fs.existsSync(stamped)) {
+        const v = JSON.parse(fs.readFileSync(stamped, 'utf8')).version;
+        check('stamped version matches package.json', v === pkg, v + ' vs ' + pkg);
+      }
+    } else {
+      check('no bundle to stamp off macOS', !fs.existsSync(stamped));
     }
+    // Whatever the platform, the version lookup must try both places rather than
+    // falling straight through to 0.0.0, which is the bug this all came from.
+    const verFromServer = (() => {
+      const src = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
+      return /require\('\.\/version\.json'\)/.test(src) && /require\('\.\.\/package\.json'\)/.test(src);
+    })();
+    check('version lookup tries the bundle stamp and package.json', verFromServer);
     fs.rmSync(d, { recursive: true, force: true });
   })();
   check('update actions handle an unreachable server', (() => {
