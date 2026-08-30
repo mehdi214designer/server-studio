@@ -4,7 +4,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFile, exec } = require('child_process');
+const { execFile } = require('child_process');
 
 const WIN = process.platform === 'win32';
 const MAC = process.platform === 'darwin';
@@ -86,15 +86,21 @@ function killPort(port, cb) {
   if (!p) return cb(new Error('bad port'));
   if (WIN) {
     // netstat lists the owning PID in the last column of LISTENING rows.
-    return exec('netstat -ano -p tcp | findstr LISTENING | findstr :' + p, (err, stdout) => {
+    // execFile (no shell) avoids ever building a shell command string from `port`.
+    return execFile('netstat', ['-ano', '-p', 'tcp'], (err, stdout) => {
       const pids = new Set(String(stdout || '').trim().split(/\r?\n/)
+        .filter(l => /LISTENING/.test(l) && l.includes(':' + p + ' '))
         .map(l => l.trim().split(/\s+/).pop())
         .filter(x => /^\d+$/.test(x) && x !== '0'));
       if (!pids.size) return cb(null);
-      exec([...pids].map(id => 'taskkill /PID ' + id + ' /T /F').join(' & '), () => cb(null));
+      execFile('taskkill', ['/T', '/F', ...[...pids].flatMap(id => ['/PID', id])], () => cb(null));
     });
   }
-  return exec('lsof -nti tcp:' + p + ' | xargs kill 2>/dev/null', () => cb(null));
+  return execFile('lsof', ['-nti', 'tcp:' + p], (err, stdout) => {
+    const pids = String(stdout || '').trim().split(/\r?\n/).filter(Boolean);
+    if (!pids.length) return cb(null);
+    execFile('kill', pids, () => cb(null));
+  });
 }
 
 /* ---------- native "choose a folder" dialog ---------- */
