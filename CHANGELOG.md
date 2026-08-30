@@ -2,6 +2,31 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## 1.2.5 — 2026-08-30
+
+### The install counter is gone
+- **Removed:** the anonymous install counter added in 1.2.0. It was never switched on. The
+  endpoint came from `SERVER_STUDIO_ANALYTICS_URL`, which had no default, so no published build
+  ever sent a ping and the collector was never deployed. Removed outright rather than left
+  dormant, along with the bundled Cloudflare Worker, both opt-out variables and the README
+  section describing it.
+- Server Studio now makes exactly two outbound requests: a public read of
+  `registry.npmjs.org` to check for updates, which sends nothing about you, and the sidebar
+  email box, which is silent until you type an address and press send. The README says so
+  precisely.
+- The sidebar email box is untouched. It never depended on any of this.
+
+### Fixed
+- **Fixed:** `telemetry.js` carried a `req.unref()` call that had never run once. `ClientRequest`
+  has no such method, so the `typeof` guard silently skipped it on every Node version. The socket
+  unref beside it was doing all the work. The comments claiming it was a Node 18 workaround were
+  wrong on both counts.
+- **Fixed:** the install-timing check in CI failed at random on macOS. It pointed at a black-hole
+  IP and hoped the connection would hang, which depends entirely on the network, and it inherited
+  `CI=true`, under which the ping did not fire at all, so it was timing two identical runs. It now
+  uses a local listener that accepts and never answers. That check retired with the counter it
+  tested.
+
 ## 1.2.4 — 2026-08-30
 
 - **Fixed:** on Windows, stopping a server could kill an unrelated process. The port was matched
@@ -81,6 +106,7 @@ Notable changes to Server Studio. Dates are release dates.
 - Documented in the README, with `SERVER_STUDIO_NO_TELEMETRY=1` and `DO_NOT_TRACK` both honoured.
 - Signups go to the author's own list, so the bundled Cloudflare Worker keeps only anonymous counts
   and its open write route is gone.
+- **Superseded by 1.2.5:** none of this counting was ever active, and it was removed entirely.
 
 ## 1.1.1 — 2026-08-25
 

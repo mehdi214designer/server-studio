@@ -199,8 +199,8 @@ const server = http.createServer(async (req, res) => {
     });
   }
 
-  // Optional email signup. The browser posts here (same-origin), and we forward the
-  // user's chosen email to the remote counter. Inert if no analytics URL is set.
+  // Optional email signup. The browser posts here (same-origin) and we forward the
+  // address the user typed to the signup endpoint. Nothing is sent until they press send.
   if (req.method === 'POST' && url === '/api/subscribe') {
     const b = await body(req);
     if (!b) return send(res, 415, { error: 'expected application/json' });
@@ -277,7 +277,6 @@ const server = http.createServer(async (req, res) => {
 ensureStore();
 server.listen(PORT, '127.0.0.1', () => {
   console.log('Server Studio running on http://localhost:' + PORT);
-  telemetry.ping('start'); // one anonymous count per real launch (app or CLI)
   plat.openExternal('http://localhost:' + PORT + '/', () => {});
 });
 server.on('error', (e) => {

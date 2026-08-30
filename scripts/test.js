@@ -7,7 +7,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
-const net = require('net');
 const { execFileSync, spawn } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
@@ -248,11 +247,45 @@ function req(opts, body) {
     return /try\s*\{/.test(block) && /catch/.test(block);
   })());
 
-  // ---- telemetry ----
-  // It ships inert and must stay that way until an endpoint is configured, must honour
-  // both opt-outs, and must never keep a process alive on a network it cannot reach.
+  // ---- no install counter ships ----
+  // 1.2.0 to 1.2.4 carried one, but it was never switched on: the endpoint came from an
+  // env var with no default, so no published build ever sent anything, and the Worker
+  // meant to receive it was never deployed. Removed in 1.2.5 rather than left dormant.
+  // These checks exist so it cannot quietly come back.
+  (function () {
+    const t = fs.readFileSync(path.join(ROOT, 'src', 'telemetry.js'), 'utf8');
+    const s2 = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
+    const c = fs.readFileSync(path.join(ROOT, 'bin', 'cli.js'), 'utf8');
+    check('no analytics endpoint in telemetry.js', !/ANALYTICS_URL/.test(t));
+    check('no counter left in telemetry.js', !/function ping|\.ping\(/.test(t));
+    check('nothing pings on launch or install', !/\.ping\(/.test(s2) && !/\.ping\(/.test(c));
+    check('the analytics worker is gone', !fs.existsSync(path.join(ROOT, 'analytics')));
+  })();
+
+  // Everything the app can talk to, so a new host cannot appear unnoticed. Two are
+  // expected: the public npm registry for the update check, which sends nothing about
+  // the user, and the signup, which only fires when someone presses send. Matches real
+  // URL literals and quoted host fields only -- an earlier version grepped for anything
+  // dot-something and flagged the string "scripts.dev" in setport.js as a hostname.
+  (function () {
+    // A real hostname: dot-separated, letters in the last label. Drops localhost, bare
+    // IPs, and the ' + PORT + ' fragments that string concatenation leaves behind.
+    const REAL = /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i;
+    const hosts = [];
+    ['src/server.js', 'src/telemetry.js', 'src/platform.js', 'src/setport.js', 'bin/cli.js'].forEach(f => {
+      const t = fs.readFileSync(path.join(ROOT, f), 'utf8');
+      const found = (t.match(/https?:\/\/[a-zA-Z0-9._-]+/g) || []).map(u => u.replace(/^https?:\/\//, ''))
+        .concat((t.match(/host(?:name)?: *'[^']+'/g) || []).map(h => h.split("'")[1]));
+      found.forEach(h => { if (REAL.test(h) && !hosts.includes(h)) hosts.push(h); });
+    });
+    const allowed = ['www.mahdicreates.com', 'registry.npmjs.org'];
+    check('the app talks to no host beyond the registry and the signup',
+      hosts.length === allowed.length && allowed.every(a => hosts.includes(a)), hosts.join(', ') || '(none found)');
+  })();
+
+  // The signup must be untouched by that removal, and gated on nothing but its own URL.
   function loadTelemetry(extra) {
-    const keys = ['SERVER_STUDIO_ANALYTICS_URL','SERVER_STUDIO_NO_TELEMETRY','DO_NOT_TRACK','CI'];
+    const keys = ['SERVER_STUDIO_SUBSCRIBE_URL', 'SERVER_STUDIO_NO_TELEMETRY', 'DO_NOT_TRACK'];
     const saved = {};
     keys.forEach(k => { saved[k] = process.env[k]; delete process.env[k]; });
     Object.assign(process.env, extra || {});
@@ -261,76 +294,19 @@ function req(opts, body) {
     keys.forEach(k => { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; });
     return m;
   }
-  check('telemetry is inert with no endpoint set', loadTelemetry({}).enabled === false);
-  check('telemetry enables only when an endpoint is set',
-    loadTelemetry({ SERVER_STUDIO_ANALYTICS_URL: 'https://example.invalid' }).enabled === true);
-  check('ping never throws when opted out', (() => {
-    try { loadTelemetry({ SERVER_STUDIO_ANALYTICS_URL: 'https://example.invalid', SERVER_STUDIO_NO_TELEMETRY: '1' }).ping('start'); return true; }
-    catch (e) { return false; }
+  check('the signup works out of the box', loadTelemetry({}).subscribeEnabled === true);
+  check('a fork can point the signup at its own list',
+    loadTelemetry({ SERVER_STUDIO_SUBSCRIBE_URL: 'https://example.invalid/x' }).subscribeEnabled === true);
+  check('the retired telemetry opt-outs do not disable the signup', (() => {
+    const m = loadTelemetry({ SERVER_STUDIO_NO_TELEMETRY: '1', DO_NOT_TRACK: '1' });
+    return m.subscribeEnabled === true && typeof m.subscribe === 'function';
   })());
-  check('DO_NOT_TRACK is honoured', (() => {
-    try { loadTelemetry({ SERVER_STUDIO_ANALYTICS_URL: 'https://example.invalid', DO_NOT_TRACK: '1' }).ping('start'); return true; }
-    catch (e) { return false; }
-  })());
-  (function () {
-    const t = fs.readFileSync(path.join(ROOT, 'src', 'telemetry.js'), 'utf8');
-    // The socket is what holds the loop open, on every Node version. There used to be
-    // a check here for req.unref() too, asserting on a line that never ran:
-    // http.ClientRequest has no unref(), so the typeof guard always skipped it.
-    check('the ping unrefs its socket so it cannot hold a process open', /sock\.unref\(\)/.test(t));
-    check('no dead req.unref() creeps back in', !/req\.unref\(\)/.test(t));
-  })();
-  check('README documents telemetry and the opt-out', (() => {
+  check('a bad address is rejected before any request',
+    (await loadTelemetry({}).subscribe('not-an-email', 'hi')) === false);
+  check('README no longer claims to send pings', (() => {
     const r = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
-    return /^## Telemetry/m.test(r) && r.includes('SERVER_STUDIO_NO_TELEMETRY');
+    return !/^## Telemetry/m.test(r) && !/SERVER_STUDIO_NO_TELEMETRY|SERVER_STUDIO_ANALYTICS_URL/.test(r);
   })());
-
-  // A blocked endpoint must not slow an install down.
-  //
-  // This used to point at 10.255.255.1 and hope the connect would hang. It depends
-  // entirely on the network: a machine with no route there is refused in 40ms, while
-  // a runner that silently drops the packets waits out the timeout. So the check
-  // proved nothing on a laptop and was a coin flip on CI. Worse, it inherited CI=true
-  // from the runner, and ping() bails out on CI, so neither install ever opened a
-  // socket at all -- it was timing two identical runs and failing whenever macOS
-  // stalled one of them.
-  //
-  // Instead: a real listener on 127.0.0.1 that accepts the connection and never
-  // answers. Every OS behaves the same, and the only thing that lets the installer
-  // exit is the unref. Without it, the ping holds the process for the full 1500ms
-  // timeout, every single run.
-  const held = [];
-  const silent = net.createServer(sock => { held.push(sock); }); // accept, never reply
-  await new Promise(r => silent.listen(0, '127.0.0.1', r));
-  const silentUrl = 'http://127.0.0.1:' + silent.address().port;
-
-  function timedInstall(extraEnv) {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-timed-'));
-    const env2 = { ...process.env, SERVER_STUDIO_APP_DEST: path.join(dir, 'app'),
-      SERVER_STUDIO_SKILL_DEST: path.join(dir, 'skill'),
-      SERVER_STUDIO_DATA_DIR: path.join(dir, 'data'), ...extraEnv };
-    delete env2.CI; delete env2.SERVER_STUDIO_NO_TELEMETRY; delete env2.DO_NOT_TRACK;
-    const t = Date.now();
-    try {
-      execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], { env: env2, stdio: 'ignore' });
-    } catch (e) {}
-    const ms = Date.now() - t;
-    fs.rmSync(dir, { recursive: true, force: true });
-    return ms;
-  }
-  // Fastest of three. Runner noise only ever adds time, so the minimum is stable,
-  // while a missing unref adds the timeout to every run and still shows up.
-  function fastestInstall(extraEnv) {
-    let best = Infinity;
-    for (let i = 0; i < 3; i++) best = Math.min(best, timedInstall(extraEnv));
-    return best;
-  }
-  const baseline = fastestInstall({ SERVER_STUDIO_ANALYTICS_URL: '' });
-  const blocked = fastestInstall({ SERVER_STUDIO_ANALYTICS_URL: silentUrl });
-  held.forEach(s => s.destroy());
-  silent.close();
-  check('an unreachable endpoint does not delay install',
-    blocked - baseline < 700, 'baseline ' + baseline + 'ms, blocked ' + blocked + 'ms, delta ' + (blocked - baseline) + 'ms');
 
   // ---- killing a port must not catch a longer port that shares its prefix ----
   // On Windows this used to shell out to `findstr :5173`, which also matched
