@@ -2,6 +2,16 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## 1.2.6 — 2026-08-30
+
+- Documentation only. No runtime change; the code is identical to 1.2.5.
+- The README now says that anyone on **1.1.1 or older** has no update button, because the version
+  badge and the update check both arrived in 1.2.0. They update once with
+  `npm install -g server-studio` and the badge takes over from there. This is published as a release
+  because npm renders the README from the package, so the note was missing on the page most people
+  land on.
+- Removed a line that appeared twice.
+
 ## 1.2.5 — 2026-08-30
 
 ### The install counter is gone
