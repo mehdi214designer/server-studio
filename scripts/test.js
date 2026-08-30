@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
+const net = require('net');
 const { execFileSync, spawn } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
@@ -283,27 +284,50 @@ function req(opts, body) {
     return /^## Telemetry/m.test(r) && r.includes('SERVER_STUDIO_NO_TELEMETRY');
   })());
 
-  // A blocked endpoint must not slow an install down. Comparing the two runs matters
-  // more than an absolute number: a slow CI runner makes any fixed threshold flaky,
-  // while the gap between them is exactly what unref is supposed to remove.
+  // A blocked endpoint must not slow an install down.
+  //
+  // This used to point at 10.255.255.1 and hope the connect would hang. It depends
+  // entirely on the network: a machine with no route there is refused in 40ms, while
+  // a runner that silently drops the packets waits out the timeout. So the check
+  // proved nothing on a laptop and was a coin flip on CI. Worse, it inherited CI=true
+  // from the runner, and ping() bails out on CI, so neither install ever opened a
+  // socket at all -- it was timing two identical runs and failing whenever macOS
+  // stalled one of them.
+  //
+  // Instead: a real listener on 127.0.0.1 that accepts the connection and never
+  // answers. Every OS behaves the same, and the only thing that lets the installer
+  // exit is the unref. Without it, the ping holds the process for the full 1500ms
+  // timeout, every single run.
+  const held = [];
+  const silent = net.createServer(sock => { held.push(sock); }); // accept, never reply
+  await new Promise(r => silent.listen(0, '127.0.0.1', r));
+  const silentUrl = 'http://127.0.0.1:' + silent.address().port;
+
   function timedInstall(extraEnv) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-timed-'));
+    const env2 = { ...process.env, SERVER_STUDIO_APP_DEST: path.join(dir, 'app'),
+      SERVER_STUDIO_SKILL_DEST: path.join(dir, 'skill'),
+      SERVER_STUDIO_DATA_DIR: path.join(dir, 'data'), ...extraEnv };
+    delete env2.CI; delete env2.SERVER_STUDIO_NO_TELEMETRY; delete env2.DO_NOT_TRACK;
     const t = Date.now();
     try {
-      execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], {
-        env: { ...process.env, SERVER_STUDIO_APP_DEST: path.join(dir, 'app'),
-          SERVER_STUDIO_SKILL_DEST: path.join(dir, 'skill'),
-          SERVER_STUDIO_DATA_DIR: path.join(dir, 'data'), ...extraEnv },
-        stdio: 'ignore',
-      });
+      execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'], { env: env2, stdio: 'ignore' });
     } catch (e) {}
     const ms = Date.now() - t;
     fs.rmSync(dir, { recursive: true, force: true });
     return ms;
   }
-  const baseline = timedInstall({ SERVER_STUDIO_ANALYTICS_URL: '' });
-  const blocked = timedInstall({ SERVER_STUDIO_ANALYTICS_URL: 'https://10.255.255.1' });
-  // Without unref the pending socket holds the process for the full 1500ms timeout.
+  // Fastest of three. Runner noise only ever adds time, so the minimum is stable,
+  // while a missing unref adds the timeout to every run and still shows up.
+  function fastestInstall(extraEnv) {
+    let best = Infinity;
+    for (let i = 0; i < 3; i++) best = Math.min(best, timedInstall(extraEnv));
+    return best;
+  }
+  const baseline = fastestInstall({ SERVER_STUDIO_ANALYTICS_URL: '' });
+  const blocked = fastestInstall({ SERVER_STUDIO_ANALYTICS_URL: silentUrl });
+  held.forEach(s => s.destroy());
+  silent.close();
   check('an unreachable endpoint does not delay install',
     blocked - baseline < 700, 'baseline ' + baseline + 'ms, blocked ' + blocked + 'ms, delta ' + (blocked - baseline) + 'ms');
 
