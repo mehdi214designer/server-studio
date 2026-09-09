@@ -25,9 +25,19 @@ useful if its port stays correct, so:
 
 1. **Allocate once.** For a new project, let the script pick a free, never-used port with
    `--assign` (or pass a specific `--url`). It guarantees no two projects share a port.
-2. **Bake it into the project so the dev server ALWAYS uses that exact port** — never a random
-   one. Use the framework's strict-port option so it fails loudly instead of drifting to another port:
-   - Vite: `vite.config` → `server: { port: <n>, strictPort: true }` (or `vite --port <n> --strictPort`)
+2. **Bake it into the project so the dev server ALWAYS uses that exact port**, never a random one.
+   Use the framework's strict-port option so it fails loudly instead of drifting to another port.
+
+   **Merge, never replace.** If there is already config where you are writing, change only the port
+   and strict-port keys and leave every other key exactly as it is. A `server` block often holds
+   `proxy`, `host`, `https` or `hmr` settings someone tuned by hand, and losing those is far worse
+   than a drifting port. If you cannot make that edit surgically, stop and tell the user rather than
+   rewriting the block.
+
+   - Vite: in `vite.config`, set `server.port` to `<n>` and `server.strictPort` to `true`, keeping
+     every other key already in `server`. Only if there is no `server` block at all, add one holding
+     just those two. (Or leave the config untouched and use `vite --port <n> --strictPort` in the
+     dev script.)
    - Next.js: dev script → `next dev -p <n>`
    - Astro: `astro dev --port <n>`
    - CRA / react-scripts: `PORT=<n> react-scripts start`

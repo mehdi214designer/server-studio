@@ -247,6 +247,18 @@ function req(opts, body) {
     return /try\s*\{/.test(block) && /catch/.test(block);
   })());
 
+  // The skill tells Claude to edit project config. It must say merge, not replace: a Vite
+  // `server` block often holds proxy/host/hmr settings someone tuned by hand, and the old
+  // wording showed `server: { port, strictPort }` as a literal object, which reads like
+  // "make it this". Raised by a reader on Reddit.
+  (function () {
+    const k = fs.readFileSync(path.join(ROOT, 'skill', 'SKILL.md'), 'utf8');
+    check('the skill says merge, never replace', /Merge, never replace/.test(k));
+    check('the skill names what a server block can hold', /proxy/.test(k) && /hmr/.test(k));
+    check('the skill no longer shows the server block as a literal to write',
+      !/server: \{ port: <n>, strictPort: true \}/.test(k));
+  })();
+
   // ---- no install counter ships ----
   // 1.2.0 to 1.2.4 carried one, but it was never switched on: the endpoint came from an
   // env var with no default, so no published build ever sent anything, and the Worker

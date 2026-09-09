@@ -2,6 +2,20 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## 1.2.7 — 2026-09-10
+
+- Documentation only. No code change; `src/` and `bin/` are identical to 1.2.6.
+- The skill now tells Claude to **merge, never replace** when writing a port into project config.
+  It listed the Vite setting as `server: { port, strictPort }`, a literal object, which reads like
+  an instruction to write that block rather than to add two keys to whatever is already there. A
+  `server` block often holds `proxy`, `host`, `https` or `hmr` settings tuned by hand. The skill now
+  says to keep every other key, to add a `server` block only when none exists, and to stop and say
+  so if the edit cannot be made surgically. Raised by a reader on Reddit.
+- For the record, nothing in Server Studio itself has ever written to `vite.config`. `--assign` only
+  writes to Server Studio's own list, and the port-clash fix only ever edits `scripts.dev` or
+  `scripts.start` in `package.json`, as raw text, with a backup. This release closes the gap between
+  that and what the skill told Claude to do.
+
 ## 1.2.6 — 2026-08-30
 
 - Documentation only. No runtime change; the code is identical to 1.2.5.
