@@ -199,9 +199,9 @@ function req(opts, body) {
 
   // ---- version comparison behind the update pill ----
   (function () {
-    const src = fs.readFileSync(path.join(ROOT, 'src', 'server.js'), 'utf8');
-    const m = src.match(/function isNewer\(a, b\) \{[\s\S]*?\n\}/);
-    const isNewer = eval('(' + m[0].replace('function isNewer', 'function') + ')');
+    // Was: read server.js, regex the function out, eval it. It lives in its own module
+    // now, so the test just requires the real thing.
+    const { isNewer } = require(path.join(ROOT, 'src', 'semver.js'));
     check('1.2.0 is newer than 1.1.1', isNewer('1.2.0', '1.1.1'));
     check('1.1.1 is not newer than itself', !isNewer('1.1.1', '1.1.1'));
     check('1.1.1 is not newer than 1.2.0', !isNewer('1.1.1', '1.2.0'));
@@ -258,6 +258,12 @@ function req(opts, body) {
     check('the skill no longer shows the server block as a literal to write',
       !/server: \{ port: <n>, strictPort: true \}/.test(k));
   })();
+
+  check('no eval anywhere in the suite or the app', (() => {
+    const files = ['scripts/test.js', 'src/server.js', 'src/semver.js', 'src/setport.js',
+      'src/platform.js', 'src/telemetry.js', 'bin/cli.js', 'skill/register-server.js'];
+    return files.every(f => !/\beval\s*\(/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
+  })());
 
   // ---- the installer must never delete someone else's folder ----
   // Every destination is overridable by env var and every one went to rmSync with

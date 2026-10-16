@@ -2,6 +2,16 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## 1.2.9 — 2026-10-16
+
+- **Removed the last `eval` in the project.** The version-comparison test read `server.js`, pulled
+  the `isNewer` function out with a regex and evaluated it dynamically, because requiring
+  `server.js` starts a server. The input was always our own committed source and the file never
+  shipped, so nothing was exploitable, but evaluating your own source to test it is a bad habit and
+  it is the first thing any scanner reports.
+- `isNewer` now lives in `src/semver.js`, which both `server.js` and the test require directly. A
+  check fails the suite if `eval` appears anywhere in the app or the suite again.
+
 ## 1.2.8 — 2026-10-16
 
 ### The installer will not delete a folder that is not ours

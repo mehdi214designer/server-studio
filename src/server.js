@@ -95,14 +95,7 @@ function appVersion() {
   try { return require('../package.json').version || '0.0.0'; } catch (e) {}
   return '0.0.0';
 }
-function isNewer(a, b) {
-  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    const x = pa[i] || 0, y = pb[i] || 0;
-    if (x !== y) return x > y;
-  }
-  return false;
-}
+const { isNewer } = require('./semver');
 function latestVersion() {
   return new Promise((resolve, reject) => {
     const req = require('https').get({
