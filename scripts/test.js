@@ -271,7 +271,11 @@ function req(opts, body) {
       let code = 0, out = '';
       try {
         out = execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install', '--no-app'], {
-          env: { ...process.env, HOME: path.join(dir, 'fakehome'),
+          // os.homedir() reads HOME on POSIX and USERPROFILE on Windows, so set both or
+          // the fake home is ignored and the real one is compared against instead.
+          env: { ...process.env,
+            HOME: path.join(dir, 'fakehome'),
+            USERPROFILE: path.join(dir, 'fakehome'),
             SERVER_STUDIO_APP_DEST: path.join(dir, 'a', 'Server Studio.app'),
             SERVER_STUDIO_DATA_DIR: path.join(dir, 'd'),
             ...env(dir) },
