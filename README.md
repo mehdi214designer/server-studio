@@ -40,6 +40,46 @@ npx server-studio install
 Installing this as a project dependency deliberately does **not** set anything up, since that would
 write outside the package on a machine that only wanted the library.
 
+### No npm? That is fine
+
+npm is convenient, not required. There are no dependencies to install, so a plain download works just
+as well. You still need Node itself, because the app runs on it.
+
+Download the code, either with **Code → Download ZIP** on the repository page, or:
+
+```bash
+curl -L https://github.com/mehdi214designer/server-studio/archive/refs/heads/main.tar.gz | tar xz
+cd server-studio-main
+```
+
+Then set it up exactly as the npm route would:
+
+```bash
+node bin/cli.js install
+```
+
+Or skip installing and just run it from the folder, which changes nothing on your machine:
+
+```bash
+node src/server.js
+```
+
+This is also the route if your Linux distribution splits the packages, which Debian and Ubuntu do, so
+you ended up with `nodejs` but no `npm`.
+
+### No Node either?
+
+Node is the one thing Server Studio cannot do without. Install it once and either route above works:
+
+- **macOS and Windows:** the installer at [nodejs.org](https://nodejs.org) is a normal double-click
+  installer. No terminal needed for this part.
+- **Homebrew:** `brew install node`
+- **Windows:** `winget install OpenJS.NodeJS`
+- **Debian / Ubuntu:** `sudo apt install nodejs npm`
+
+If you open the Mac app without Node installed it will tell you so and point you here, rather than
+failing quietly.
+
 **macOS**
 
 `install` copies the app to `/Applications` and installs the Claude Code skill. Then open it from
