@@ -25,6 +25,46 @@ const cmd = has('-h') || has('--help') ? 'help' : (args.find(a => !a.startsWith(
 const DRY = has('--dry-run');
 
 function die(msg) { console.error('error: ' + msg); process.exit(1); }
+
+// ---- never recursively delete something we did not put there ----
+//
+// All three destinations are overridable by env var, and every one of them is handed to
+// fs.rmSync with recursive:true. One missing path segment was all it took: pointing
+// SERVER_STUDIO_SKILL_DEST at ~/.claude/skills instead of ~/.claude/skills/server-studio
+// deleted every other skill in that folder and still printed "ok".
+//
+// So a destination is only ever removed when it carries our own marker files, and never
+// when it is the filesystem root, the home folder, or anything above it.
+function unsafeTarget(dir) {
+  const d = path.resolve(dir);
+  const home = path.resolve(os.homedir());
+  if (d === path.parse(d).root) return 'it is the filesystem root';
+  if (d === home) return 'it is your home folder';
+  if (home.startsWith(d + path.sep)) return 'your home folder is inside it';
+  return null;
+}
+
+// Marker files that prove a directory is one of ours, rather than someone else's.
+const MARKERS = {
+  app: [path.join('Contents', 'MacOS', 'ServerStudio')],
+  skill: ['SKILL.md', 'register-server.js'],
+  data: ['data.json'],
+};
+
+// Removes dir only when it is safe and ours. Nothing there is success, not failure.
+function removeOurs(dir, kind, label) {
+  if (!fs.existsSync(dir)) return;
+  const why = unsafeTarget(dir);
+  if (why) die('refusing to delete ' + dir + ', ' + why + '.');
+  const mine = MARKERS[kind].some(m => fs.existsSync(path.join(dir, m)));
+  if (!mine) {
+    die('refusing to delete ' + dir + '\n' +
+      '  It exists but does not look like ' + label + ', so it is probably not ours.\n' +
+      '  Expected to find ' + MARKERS[kind].join(' or ') + ' inside it.\n' +
+      '  Check the path, or move that folder aside yourself and run this again.');
+  }
+  fs.rmSync(dir, { recursive: true, force: true });
+}
 function ok(msg) { console.log('  ok  ' + msg); }
 function skip(msg) { console.log('  --  ' + msg); }
 
@@ -58,7 +98,7 @@ function install() {
     skip('Mac app skipped, this is ' + process.platform + '. Use:  npx server-studio start');
   } else if (!has('--no-app')) {
     if (fs.existsSync(APP_DEST)) {
-      fs.rmSync(APP_DEST, { recursive: true, force: true });
+      removeOurs(APP_DEST, 'app', 'a Server Studio app bundle');
       fs.cpSync(APP_SRC, APP_DEST, { recursive: true });
       ok('app updated at ' + APP_DEST);
     } else {
@@ -81,7 +121,7 @@ function install() {
 
   if (!has('--no-skill')) {
     fs.mkdirSync(path.dirname(SKILL_DEST), { recursive: true });
-    fs.rmSync(SKILL_DEST, { recursive: true, force: true });
+    removeOurs(SKILL_DEST, 'skill', 'the Server Studio skill');
     fs.cpSync(SKILL_SRC, SKILL_DEST, { recursive: true });
     ok('Claude Code skill at ' + SKILL_DEST);
   } else skip('skill skipped (--no-skill)');
@@ -131,15 +171,15 @@ function uninstall() {
   }
   console.log('Removing Server Studio...\n');
 
-  if (MAC && fs.existsSync(APP_DEST)) { fs.rmSync(APP_DEST, { recursive: true, force: true }); ok('removed ' + APP_DEST); }
+  if (MAC && fs.existsSync(APP_DEST)) { removeOurs(APP_DEST, 'app', 'a Server Studio app bundle'); ok('removed ' + APP_DEST); }
   else if (MAC) skip('no app at ' + APP_DEST);
 
-  if (fs.existsSync(SKILL_DEST)) { fs.rmSync(SKILL_DEST, { recursive: true, force: true }); ok('removed ' + SKILL_DEST); }
+  if (fs.existsSync(SKILL_DEST)) { removeOurs(SKILL_DEST, 'skill', 'the Server Studio skill'); ok('removed ' + SKILL_DEST); }
   else skip('no skill at ' + SKILL_DEST);
 
   // The server list is the user's own data, so it survives unless asked for explicitly.
   if (has('--purge')) {
-    if (fs.existsSync(DATA_DIR)) { fs.rmSync(DATA_DIR, { recursive: true, force: true }); ok('deleted saved servers at ' + DATA_DIR); }
+    if (fs.existsSync(DATA_DIR)) { removeOurs(DATA_DIR, 'data', 'a Server Studio data folder'); ok('deleted saved servers at ' + DATA_DIR); }
     else skip('no saved servers to delete');
   } else if (fs.existsSync(DATA_DIR)) {
     console.log('\nYour saved servers were kept at:\n  ' + DATA_DIR);

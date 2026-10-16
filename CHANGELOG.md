@@ -2,6 +2,26 @@
 
 Notable changes to Server Studio. Dates are release dates.
 
+## 1.2.8 — 2026-10-16
+
+### The installer will not delete a folder that is not ours
+- **Fixed:** every install destination is overridable by an environment variable, and each one was
+  handed straight to `fs.rmSync` with `recursive: true`. One missing path segment was enough to lose
+  unrelated work: pointing `SERVER_STUDIO_SKILL_DEST` at `~/.claude/skills` instead of
+  `~/.claude/skills/server-studio` deleted every other skill in that folder, and still printed `ok`.
+- A destination is now only removed when it carries our own marker files, and never when it is the
+  filesystem root, your home folder, or anything above it. Anything else stops the install with an
+  error naming the folder and what it expected to find, instead of deleting and carrying on.
+- Same guard on `uninstall` and on `uninstall --purge`, which could take a data folder the same way.
+- Four regression tests run the real installer against a fake home, each verified to fail when the
+  guard is taken out.
+
+### Documentation
+- The README now covers installing **without npm**. There are no dependencies, so a plain download
+  plus `node bin/cli.js install` does the same job, and `node src/server.js` runs it without
+  installing anything. Also covers Debian and Ubuntu, where `nodejs` and `npm` are separate packages,
+  and what to do with no Node at all. Every command was run end to end before it was written down.
+
 ## 1.2.7 — 2026-09-10
 
 - Documentation only. No code change; `src/` and `bin/` are identical to 1.2.6.

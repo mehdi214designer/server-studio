@@ -259,6 +259,60 @@ function req(opts, body) {
       !/server: \{ port: <n>, strictPort: true \}/.test(k));
   })();
 
+  // ---- the installer must never delete someone else's folder ----
+  // Every destination is overridable by env var and every one went to rmSync with
+  // recursive:true. Pointing SERVER_STUDIO_SKILL_DEST at ~/.claude/skills instead of
+  // ~/.claude/skills/server-studio wiped every other skill in there and printed "ok".
+  // These run the real installer against a fake home, so they test behaviour.
+  (function () {
+    function runInstall(env) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-guard-'));
+      fs.mkdirSync(path.join(dir, 'fakehome'), { recursive: true });
+      let code = 0, out = '';
+      try {
+        out = execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install', '--no-app'], {
+          env: { ...process.env, HOME: path.join(dir, 'fakehome'),
+            SERVER_STUDIO_APP_DEST: path.join(dir, 'a', 'Server Studio.app'),
+            SERVER_STUDIO_DATA_DIR: path.join(dir, 'd'),
+            ...env(dir) },
+          encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+        });
+      } catch (e) { code = e.status; out = String(e.stdout || '') + String(e.stderr || ''); }
+      return { dir, code, out };
+    }
+
+    // a skills folder holding somebody else's skills
+    const r = runInstall(d => {
+      const skills = path.join(d, 'fakehome', '.claude', 'skills');
+      fs.mkdirSync(path.join(skills, 'someone-elses-skill'), { recursive: true });
+      fs.writeFileSync(path.join(skills, 'someone-elses-skill', 'SKILL.md'), 'precious\n');
+      return { SERVER_STUDIO_SKILL_DEST: skills };
+    });
+    const other = path.join(r.dir, 'fakehome', '.claude', 'skills', 'someone-elses-skill', 'SKILL.md');
+    check('an unrelated skills folder is not deleted', fs.existsSync(other));
+    check('and it refuses loudly rather than carrying on', r.code === 1 && /refusing to delete/.test(r.out));
+
+    const h = runInstall(d => ({ SERVER_STUDIO_SKILL_DEST: path.join(d, 'fakehome') }));
+    check('the home folder is never a delete target', /it is your home folder/.test(h.out));
+
+    const a = runInstall(d => ({ SERVER_STUDIO_SKILL_DEST: d }));
+    check('nor is anything above the home folder', /home folder is inside it/.test(a.out));
+
+    // the ordinary paths must still work
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ss-guard-ok-'));
+    const env = { ...process.env,
+      SERVER_STUDIO_APP_DEST: path.join(dir, 'Server Studio.app'),
+      SERVER_STUDIO_SKILL_DEST: path.join(dir, 'server-studio'),
+      SERVER_STUDIO_DATA_DIR: path.join(dir, 'data') };
+    const run = () => execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.js'), 'install'],
+      { env, encoding: 'utf8' });
+    let first = '', second = '';
+    try { first = run(); second = run(); } catch (e) { first = 'FAILED: ' + e.message; }
+    check('a fresh install still works', /Claude Code skill at/.test(first));
+    check('and installing over our own copy still works', /Claude Code skill at/.test(second));
+    fs.rmSync(dir, { recursive: true, force: true });
+  })();
+
   // ---- no install counter ships ----
   // 1.2.0 to 1.2.4 carried one, but it was never switched on: the endpoint came from an
   // env var with no default, so no published build ever sent anything, and the Worker
